@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"net"
 	"net/http"
 	"time"
 )
@@ -25,12 +24,12 @@ func (session RedisSession) Clear(ctx context.Context) error {
 	return session.Client.Del(ctx).Err()
 }
 
-func (sessionProvider *RedisSessionProvider) NewRedisSessionProvider(address net.Addr) (RedisSessionProvider, error) {
+func NewRedisSessionProvider(address string) RedisSessionProvider {
 	return RedisSessionProvider{
 		Client: redis.NewClient(&redis.Options{
-			Addr: address.String(),
+			Addr: address,
 		}),
-	}, nil
+	}
 }
 
 func (sessionProvider *RedisSessionProvider) SessionRead(session string, ctx context.Context) (*RedisSession, error) {
@@ -48,7 +47,7 @@ func (sessionProvider *RedisSessionProvider) SessionDelete(session string, ctx c
 	return sessionProvider.Client.Del(ctx, session).Err()
 }
 
-func (manager *RedisSessionManager) NewRedisSessionManager(cookieName string, provider RedisSessionProvider, maxLifeTime int64) *RedisSessionManager {
+func NewRedisSessionManager(cookieName string, provider RedisSessionProvider, maxLifeTime int64) *RedisSessionManager {
 	return &RedisSessionManager{
 		Provider:    &provider,
 		Cookie:      cookieName,
