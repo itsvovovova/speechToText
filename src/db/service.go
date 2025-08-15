@@ -1,13 +1,21 @@
 package db
 
-func AddAuthData(login string, password string) error {
+func AddAuthData(username string, password string) error {
 	return nil
 }
 
-func CheckAuthData(login string, password string) (bool, error) {
+func CheckAuthData(username string, password string) (bool, error) {
 	return true, nil
 }
 
-func AddAudioTask(login string, audio string) error {
+func AddAudioTask(username string, audio string) error {
 	return nil
+}
+
+func GetStatusTask(username string) (string, error) {
+	return "", nil
+}
+
+func GetResultTask(username string) (string, error) {
+	return "", nil
 }
