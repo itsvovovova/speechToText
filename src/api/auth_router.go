@@ -55,6 +55,10 @@ func login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if err := session.Set(ctx, "username", user.Username); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	data := struct {
 		Result string `json:"result"`
 		Token  string `json:"token"`

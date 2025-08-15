@@ -11,3 +11,7 @@ type Session interface {
 	Delete(key interface{}) error
 	Set(key, value interface{}) error
 }
+
+type AudioRequest struct {
+	Audio string
+}
