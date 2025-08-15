@@ -22,10 +22,11 @@ func ReadAuthRequest(r *http.Request) (types.AuthRequest, error) {
 	return authData, nil
 }
 
-func CreateTask(request types.AudioRequest, session string) string {
+func CreateTask(username string, request types.AudioRequest) (string, error) {
 	taskID := uuid.New().String()
-
-	db.AddAudioTask()
-	// send to rabbitmq with send_message.go in consumer
-	return ""
+	if err := db.AddAudioTask(taskID, username, request.Audio); err != nil {
+		return "", err
+	}
+	// TODO: send to rabbitmq with send_message.go in consumer
+	return taskID, nil
 }

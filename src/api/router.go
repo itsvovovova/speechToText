@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"speechToText/src/cache"
 	"speechToText/src/db"
+	"speechToText/src/service"
 	"speechToText/src/types"
 )
 
@@ -29,11 +30,15 @@ func audio(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err := db.AddAudioTask(username, request.Audio); err != nil {
+	taskID, err := service.CreateTask(username, request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	if err := db.AddAudioTask(taskID, username, request.Audio); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// send task to queue rabbitmq
+	// TODO: send task to queue rabbitmq
 }
 
 func status(w http.ResponseWriter, r *http.Request) {

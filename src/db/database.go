@@ -5,7 +5,7 @@ import (
 	"log"
 )
 
-var db *sql.DB
+var db = InitDB()
 
 func InitDB() *sql.DB {
 	connStr := "host=localhost port=5432 user=youruser password=yourpassword dbname=yourdb sslmode=disable"
@@ -35,9 +35,10 @@ func InitDB() *sql.DB {
 	var query2 = `
     CREATE TABLE IF NOT EXISTS tasks (
         username VARCHAR(1000) NOT NULL,
-        task VARCHAR(1000) NOT NULL,
+        task_id VARCHAR(1000) NOT NULL,
+        audio VARCHAR(1000) NOT NULL,
         status VARCHAR(1000) NOT NULL,
-        result VARCHAR(1000) NOT NULL,
+        result VARCHAR(1000),
     );`
 	_, err = db.Exec(query2)
 	if err != nil {
