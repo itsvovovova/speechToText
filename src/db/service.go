@@ -21,9 +21,9 @@ func CheckAuthData(username string, password string) (bool, error) {
 	return exists, nil
 }
 
-func AddAudioTask(username string, audio string) error {
-	query := "INSERT INTO audio (username, task,) VALUES ($1, $2)"
-	if _, err := db.Exec(query, username, audio); err != nil {
+func AddAudioTask(taskID string, username string, audio string) error {
+	query := "INSERT INTO audio (username, task_id, audio_url, status) VALUES ($1, $2, $3)"
+	if _, err := db.Exec(query, username, taskID, audio, "in progress"); err != nil {
 		return err
 	}
 	return nil
