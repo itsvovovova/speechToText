@@ -1,5 +1,7 @@
 package types
 
+import amqp "github.com/rabbitmq/amqp091-go"
+
 type AuthRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -14,4 +16,15 @@ type Session interface {
 
 type AudioRequest struct {
 	Audio string
+}
+
+type AudioMessage struct {
+	Audio  string
+	TaskID string
+}
+
+type QueueRabbitMQ struct {
+	Queue      *amqp.Queue
+	Channel    *amqp.Channel
+	Connection *amqp.Connection
 }

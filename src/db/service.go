@@ -46,3 +46,11 @@ func GetResultTask(username string) (string, error) {
 	}
 	return status, nil
 }
+
+func AddResultTask(taskID string, text string) error {
+	query := "INSERT INTO result(task_id, result) VALUES ($1, $2)"
+	if _, err := db.Exec(query, taskID, text); err != nil {
+		return err
+	}
+	return nil
+}

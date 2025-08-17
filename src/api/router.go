@@ -38,7 +38,6 @@ func audio(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// TODO: send task to queue rabbitmq
 }
 
 func status(w http.ResponseWriter, r *http.Request) {

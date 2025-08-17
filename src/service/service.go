@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	"io"
 	"net/http"
+	"speechToText/src/consumer"
 	"speechToText/src/db"
 	"speechToText/src/types"
 )
@@ -27,6 +28,10 @@ func CreateTask(username string, request types.AudioRequest) (string, error) {
 	if err := db.AddAudioTask(taskID, username, request.Audio); err != nil {
 		return "", err
 	}
-	// TODO: send to rabbitmq with send_message.go in consumer
+	err := consumer.SendMessage(taskID, "queue", request.Audio, "url")
+	if err != nil {
+		return "", err
+	}
+
 	return taskID, nil
 }
