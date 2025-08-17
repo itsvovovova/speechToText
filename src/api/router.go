@@ -14,10 +14,12 @@ func Audio(w http.ResponseWriter, r *http.Request) {
 	session, err := cache.SessionManager.SessionStart(r.Context(), w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	username, err := session.Get(r.Context(), "username")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -33,14 +35,17 @@ func Audio(w http.ResponseWriter, r *http.Request) {
 	taskID, err := service.CreateTask(username, request)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	if err := db.AddAudioTask(taskID, username, request.Audio); err != nil {
+	_, err = w.Write([]byte(taskID))
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
 func Status(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	session, err := cache.SessionManager.SessionStart(r.Context(), w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -63,6 +68,7 @@ func Status(w http.ResponseWriter, r *http.Request) {
 }
 
 func Result(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	session, err := cache.SessionManager.SessionStart(r.Context(), w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
