@@ -64,3 +64,12 @@ func AddResultTask(taskID string, text string) error {
 	}
 	return nil
 }
+
+func CheckUsername(username string) (bool, error) {
+	var exists bool
+	err := db.QueryRow("SELECT exists FROM users WHERE username = $1", username).Scan(&exists)
+	if err != nil {
+		return false, nil
+	}
+	return exists, nil
+}
