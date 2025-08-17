@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"io"
 	"net/http"
 	"speechToText/src/consumer"
@@ -33,4 +34,9 @@ func CreateTask(username string, request types.AudioRequest) (string, error) {
 		return "", err
 	}
 	return taskID, nil
+}
+
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(bytes), err
 }

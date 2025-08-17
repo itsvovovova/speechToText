@@ -2,6 +2,7 @@ package db
 
 import (
 	"log"
+	"speechToText/src/service"
 )
 
 func AddAuthData(username string, password string) error {
@@ -13,8 +14,12 @@ func AddAuthData(username string, password string) error {
 }
 
 func CheckAuthData(username string, password string) (bool, error) {
+	hashedPassword, err := service.HashPassword(password)
+	if err != nil {
+		return false, err
+	}
 	var exists bool
-	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND password = $2)", username, password).Scan(&exists)
+	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND password = $2)", username, hashedPassword).Scan(&exists)
 	if err != nil {
 		log.Fatal(err)
 	}
