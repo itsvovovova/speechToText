@@ -14,7 +14,11 @@ func register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err := db.AddAuthData(user.Username, user.Password); err != nil {
+	cryptoPassword, err := service.EncryptAES([]byte(user.Password), []byte("KEY"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+	if err := db.AddAuthData(user.Username, string(cryptoPassword)); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

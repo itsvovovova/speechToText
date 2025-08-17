@@ -32,6 +32,5 @@ func CreateTask(username string, request types.AudioRequest) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return taskID, nil
 }

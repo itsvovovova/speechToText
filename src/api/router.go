@@ -10,7 +10,7 @@ import (
 	"speechToText/src/types"
 )
 
-func audio(w http.ResponseWriter, r *http.Request) {
+func Audio(w http.ResponseWriter, r *http.Request) {
 	session, err := cache.SessionManager.SessionStart(r.Context(), w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -40,7 +40,7 @@ func audio(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func status(w http.ResponseWriter, r *http.Request) {
+func Status(w http.ResponseWriter, r *http.Request) {
 	session, err := cache.SessionManager.SessionStart(r.Context(), w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -62,7 +62,7 @@ func status(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func result(w http.ResponseWriter, r *http.Request) {
+func Result(w http.ResponseWriter, r *http.Request) {
 	session, err := cache.SessionManager.SessionStart(r.Context(), w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
