@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	prettyjson "github.com/hokaccha/go-prettyjson"
-
 	listen "github.com/deepgram/deepgram-go-sdk/pkg/api/listen/v1/rest"
 	interfaces "github.com/deepgram/deepgram-go-sdk/pkg/client/interfaces"
 	client "github.com/deepgram/deepgram-go-sdk/pkg/client/listen"
+	prettyjson "github.com/hokaccha/go-prettyjson"
 )
 
 func ConvertToText(audioUrl string) (string, error) {
