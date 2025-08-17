@@ -8,7 +8,7 @@ import (
 	"speechToText/src/service"
 )
 
-func register(w http.ResponseWriter, r *http.Request) {
+func Register(w http.ResponseWriter, r *http.Request) {
 	user, err := service.ReadAuthRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -38,7 +38,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func login(w http.ResponseWriter, r *http.Request) {
+func Login(w http.ResponseWriter, r *http.Request) {
 	user, err := service.ReadAuthRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
