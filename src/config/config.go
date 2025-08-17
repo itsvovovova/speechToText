@@ -4,8 +4,6 @@ import (
 	"os"
 )
 
-const ()
-
 var CurrentConfig = NewConfig()
 
 type Config struct {
@@ -42,6 +40,7 @@ type RedisConfig struct {
 }
 
 type RabbitMQConfig struct {
+	Url      string
 	Host     string
 	Port     string
 	Username string

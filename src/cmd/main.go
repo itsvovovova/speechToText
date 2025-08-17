@@ -17,13 +17,14 @@ func main() {
 	r.With(auth.Middleware).Get("/status", api.Status)
 	r.With(auth.Middleware).Get("/result", api.Result)
 	r.With(auth.Middleware).Post("/audio", api.Audio)
-	r.Post("login", api.Login)
+	r.Post("/login", api.Login)
 	r.Post("/register", api.Register)
-	r.Use(auth.Middleware)
 	err := http.ListenAndServe(config.CurrentConfig.Server.Port, r)
-	if err = consumer.ReceiveMessage("queue", ctx); err != nil {
-		fmt.Println("consumer error: ", err)
-	}
+	go func() {
+		if err := consumer.ReceiveMessage("queue", ctx); err != nil {
+			fmt.Println("consumer error:", err)
+		}
+	}()
 	if err != nil {
 		panic(err)
 	}

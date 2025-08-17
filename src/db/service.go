@@ -1,8 +1,9 @@
 package db
 
 import (
+	"database/sql"
+	"errors"
 	"golang.org/x/crypto/bcrypt"
-	"log"
 )
 
 func HashPassword(password string) (string, error) {
@@ -10,29 +11,22 @@ func HashPassword(password string) (string, error) {
 	return string(bytes), err
 }
 
-func AddAuthData(username string, password string) error {
-	query := "INSERT INTO users (username, password) VALUES ($1, $2)"
-	if _, err := db.Exec(query, username, password); err != nil {
-		return err
-	}
-	return nil
-}
-
 func CheckAuthData(username string, password string) (bool, error) {
-	hashedPassword, err := HashPassword(password)
+	var hashedPassword string
+	err := db.QueryRow("SELECT password FROM users WHERE username = $1", username).Scan(&hashedPassword)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
 		return false, err
 	}
-	var exists bool
-	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND password = $2)", username, hashedPassword).Scan(&exists)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return exists, nil
+
+	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+	return err == nil, nil
 }
 
 func AddAudioTask(taskID string, username string, audio string) error {
-	query := "INSERT INTO audio (username, task_id, audio_url, status) VALUES ($1, $2, $3)"
+	query := "INSERT INTO tasks (username, task_id, audio, status) VALUES ($1, $2, $3)"
 	if _, err := db.Exec(query, username, taskID, audio, "in progress"); err != nil {
 		return err
 	}
@@ -41,7 +35,7 @@ func AddAudioTask(taskID string, username string, audio string) error {
 
 func GetStatusTask(username string) (string, error) {
 	var status string
-	err := db.QueryRow("SELECT status FROM task WHERE username = $1", username).Scan(&status)
+	err := db.QueryRow("SELECT status FROM tasks WHERE username = $1", username).Scan(&status)
 	if err != nil {
 		return "", err
 	}
@@ -50,7 +44,7 @@ func GetStatusTask(username string) (string, error) {
 
 func GetResultTask(username string) (string, error) {
 	var status string
-	err := db.QueryRow("SELECT result FROM task WHERE username = $1", username).Scan(&status)
+	err := db.QueryRow("SELECT result FROM tasks WHERE username = $1", username).Scan(&status)
 	if err != nil {
 		return "", err
 	}
@@ -58,11 +52,9 @@ func GetResultTask(username string) (string, error) {
 }
 
 func AddResultTask(taskID string, text string) error {
-	query := "INSERT INTO result(task_id, result) VALUES ($1, $2)"
-	if _, err := db.Exec(query, taskID, text); err != nil {
-		return err
-	}
-	return nil
+	query := "UPDATE tasks SET result = $2, status = 'completed' WHERE task_id = $1"
+	_, err := db.Exec(query, taskID, text)
+	return err
 }
 
 func ExistUsername(username string) (bool, error) {
@@ -72,4 +64,4 @@ func ExistUsername(username string) (bool, error) {
 		return false, nil
 	}
 	return exists, nil
-
+}

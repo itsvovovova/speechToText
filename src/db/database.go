@@ -3,11 +3,16 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	_ "github.com/lib/pq"
 	"log"
 	"speechToText/src/config"
 )
 
-var db = InitDB()
+var db *sql.DB
+
+func init() {
+	db = InitDB()
+}
 
 func InitDB() *sql.DB {
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
@@ -20,20 +25,14 @@ func InitDB() *sql.DB {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func(db *sql.DB) {
-		err := db.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}(db)
 	if err := db.Ping(); err != nil {
+		_ = db.Close()
 		log.Fatal("Db connection error:", err)
-		return nil
 	}
 	var query1 = `
     CREATE TABLE IF NOT EXISTS users (
         username VARCHAR(1000) NOT NULL,
-        password VARCHAR(1000) NOT NULL,
+        password VARCHAR(1000) NOT NULL
     );`
 	_, err = db.Exec(query1)
 	if err != nil {
@@ -45,7 +44,7 @@ func InitDB() *sql.DB {
         task_id VARCHAR(1000) NOT NULL,
         audio VARCHAR(1000) NOT NULL,
         status VARCHAR(1000) NOT NULL,
-        result VARCHAR(1000),
+        result VARCHAR(1000)
     );`
 	_, err = db.Exec(query2)
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"log"
+	"speechToText/src/config"
 	"speechToText/src/db"
 	"speechToText/src/types"
 )
@@ -72,7 +73,7 @@ func SendMessage(taskID string, nameQueue string, audioUrl string, RabbitMQUrl s
 }
 
 func ReceiveMessage(nameQueue string, ctx context.Context) error {
-	queueSettings, err := declareQueue(nameQueue, nameQueue)
+	queueSettings, err := declareQueue(config.CurrentConfig.RabbitMQ.Url, nameQueue)
 	if err != nil {
 		return err
 	}

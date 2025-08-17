@@ -9,19 +9,19 @@ import (
 )
 
 func (session RedisSession) Set(ctx context.Context, key string, value interface{}) error {
-	return session.Client.Set(ctx, key, value, 0).Err()
+	return session.Client.Set(ctx, session.SessionId+key, value, 0).Err()
 }
 
 func (session RedisSession) Get(ctx context.Context, key string) (string, error) {
-	return session.Client.Get(ctx, key).Result()
+	return session.Client.Get(ctx, session.SessionId+key).Result()
 }
 
 func (session RedisSession) Delete(ctx context.Context, key string) error {
-	return session.Client.Del(ctx, key).Err()
+	return session.Client.Del(ctx, session.SessionId+key).Err()
 }
 
 func (session RedisSession) Clear(ctx context.Context) error {
-	return session.Client.Del(ctx).Err()
+	return session.Client.Del(ctx, session.SessionId+"*").Err()
 }
 
 func NewRedisSessionProvider(address string) RedisSessionProvider {
@@ -33,9 +33,15 @@ func NewRedisSessionProvider(address string) RedisSessionProvider {
 }
 
 func (sessionProvider *RedisSessionProvider) SessionRead(session string, ctx context.Context) (*RedisSession, error) {
-	var _, err = sessionProvider.Client.Exists(ctx, session).Result()
+	exists, err := sessionProvider.Client.Exists(ctx, session).Result()
 	if err != nil {
 		return nil, err
+	}
+	if exists == 0 {
+		err = sessionProvider.Client.Set(ctx, session, "", time.Hour).Err()
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &RedisSession{
 		SessionId: session,
@@ -76,7 +82,7 @@ func (manager *RedisSessionManager) SessionStart(ctx context.Context, w http.Res
 			Value:    sid,
 			Path:     "/",
 			HttpOnly: true,
-			MaxAge:   int(manager.MaxLifetime),
+			MaxAge:   int(manager.MaxLifetime.Seconds()),
 		})
 		return session, nil
 	} else {
