@@ -24,6 +24,7 @@ type ServerConfig struct {
 
 type DatabaseConfig struct {
 	Username     string
+	Name         string
 	Password     string
 	Host         string
 	Port         string
@@ -54,6 +55,7 @@ func NewConfig() *Config {
 		Password:     os.Getenv("DB_PASSWORD"),
 		Host:         os.Getenv("DB_HOST"),
 		Port:         os.Getenv("DB_PORT"),
+		Name:         os.Getenv("DB_NAME"),
 		DatabaseName: os.Getenv("DB_NAME"),
 		SSLMode:      os.Getenv("DB_SSL_MODE"),
 	}

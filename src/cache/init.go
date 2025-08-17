@@ -1,6 +1,9 @@
 package cache
 
-import "math"
+import (
+	"math"
+	"speechToText/src/config"
+)
 
-var sessionProvider = NewRedisSessionProvider(":8080")
+var sessionProvider = NewRedisSessionProvider(config.CurrentConfig.Redis.Host)
 var SessionManager = NewRedisSessionManager("session_id", sessionProvider, int64(math.Pow10(5)))

@@ -1,9 +1,14 @@
 package db
 
 import (
+	"golang.org/x/crypto/bcrypt"
 	"log"
-	"speechToText/src/service"
 )
+
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(bytes), err
+}
 
 func AddAuthData(username string, password string) error {
 	query := "INSERT INTO users (username, password) VALUES ($1, $2)"
@@ -14,7 +19,7 @@ func AddAuthData(username string, password string) error {
 }
 
 func CheckAuthData(username string, password string) (bool, error) {
-	hashedPassword, err := service.HashPassword(password)
+	hashedPassword, err := HashPassword(password)
 	if err != nil {
 		return false, err
 	}

@@ -2,13 +2,20 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"speechToText/src/config"
 )
 
 var db = InitDB()
 
 func InitDB() *sql.DB {
-	connStr := "host=localhost port=5432 user=youruser password=yourpassword dbname=yourdb sslmode=disable"
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		config.CurrentConfig.Database.Host,
+		config.CurrentConfig.Database.Port,
+		config.CurrentConfig.Database.Username,
+		config.CurrentConfig.Database.Password,
+		config.CurrentConfig.Database.Name)
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal(err)
@@ -20,7 +27,7 @@ func InitDB() *sql.DB {
 		}
 	}(db)
 	if err := db.Ping(); err != nil {
-		log.Fatal("Не удалось подключиться к базе данных:", err)
+		log.Fatal("Db connection error:", err)
 		return nil
 	}
 	var query1 = `
@@ -30,7 +37,7 @@ func InitDB() *sql.DB {
     );`
 	_, err = db.Exec(query1)
 	if err != nil {
-		log.Fatal("Ошибка при создании таблицы:", err)
+		log.Fatal("Db create table error:", err)
 	}
 	var query2 = `
     CREATE TABLE IF NOT EXISTS tasks (
@@ -42,7 +49,7 @@ func InitDB() *sql.DB {
     );`
 	_, err = db.Exec(query2)
 	if err != nil {
-		log.Fatal("Ошибка при создании таблицы:", err)
+		log.Fatal("Db error:", err)
 	}
 	return db
 }
