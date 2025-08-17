@@ -14,11 +14,17 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	HashPassword, err := db.HashPassword(user.Password)
+	hashPassword, err := db.HashPassword(user.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
-	if err := db.AddAuthData(user.Username, HashPassword); err != nil {
+	if exist, err := db.ExistUsername(user.Username); !exist {
+		http.Error(w, "Username already taken", http.StatusBadRequest)
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	if err := db.AddAuthData(user.Username, hashPassword); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -32,6 +38,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	if _, err := w.Write(rvalue); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
