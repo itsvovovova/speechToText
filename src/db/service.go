@@ -3,8 +3,18 @@ package db
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+
 	"golang.org/x/crypto/bcrypt"
 )
+
+func AddAuthData(username string, password string) error {
+	query := "INSERT INTO users (username, password) VALUES ($1, $2)"
+	if _, err := db.Exec(query, username, password); err != nil {
+		return err
+	}
+	return nil
+}
 
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -26,7 +36,7 @@ func CheckAuthData(username string, password string) (bool, error) {
 }
 
 func AddAudioTask(taskID string, username string, audio string) error {
-	query := "INSERT INTO tasks (username, task_id, audio, status) VALUES ($1, $2, $3)"
+	query := "INSERT INTO tasks (username, task_id, audio, status) VALUES ($1, $2, $3, $4)"
 	if _, err := db.Exec(query, username, taskID, audio, "in progress"); err != nil {
 		return err
 	}
@@ -43,12 +53,16 @@ func GetStatusTask(username string) (string, error) {
 }
 
 func GetResultTask(username string) (string, error) {
-	var status string
-	err := db.QueryRow("SELECT result FROM tasks WHERE username = $1", username).Scan(&status)
+	var result sql.NullString
+	err := db.QueryRow("SELECT result FROM tasks WHERE username = $1", username).Scan(&result)
 	if err != nil {
 		return "", err
 	}
-	return status, nil
+	if result.Valid {
+		return result.String, nil
+	}
+
+	return "in progress", nil
 }
 
 func AddResultTask(taskID string, text string) error {
@@ -59,9 +73,16 @@ func AddResultTask(taskID string, text string) error {
 
 func ExistUsername(username string) (bool, error) {
 	var exists bool
-	err := db.QueryRow("SELECT exists FROM users WHERE username = $1", username).Scan(&exists)
+
+	query := "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)"
+
+	err := db.QueryRow(query, username).Scan(&exists)
 	if err != nil {
-		return false, nil
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("error checking username existence: %w", err)
 	}
+
 	return exists, nil
 }

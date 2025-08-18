@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 )
 
@@ -12,6 +13,7 @@ type Config struct {
 	Logger   *LoggerConfig
 	RabbitMQ *RabbitMQConfig
 	Redis    *RedisConfig
+	Deepgram *DeepgramConfig
 }
 
 type ServerConfig struct {
@@ -48,6 +50,10 @@ type RabbitMQConfig struct {
 	UserPort string
 }
 
+type DeepgramConfig struct {
+	ApiKey string
+}
+
 func NewConfig() *Config {
 	var databaseConfig = DatabaseConfig{
 		Username:     os.Getenv("DB_USER"),
@@ -74,20 +80,27 @@ func NewConfig() *Config {
 		Host: os.Getenv("REDIS_HOST"),
 	}
 
-	var rabbitMQConfig = RabbitMQConfig{
-		Host:     os.Getenv("RABBIT_HOST"),
-		Port:     os.Getenv("RABBIT_PORT"),
-		Username: os.Getenv("RABBIT_USER"),
-		Password: os.Getenv("RABBIT_PASSWORD"),
-		UserPort: os.Getenv("RABBIT_USER_PORT"),
+	var deepgramConfig = DeepgramConfig{
+		ApiKey: os.Getenv("DEEPGRAM_API"),
 	}
 
+	var rabbitMQConfig = RabbitMQConfig{
+		Url:      os.Getenv("RABBITMQ_URL"),
+		Host:     os.Getenv("RABBITMQ_HOST"),
+		Port:     os.Getenv("RABBITMQ_PORT"),
+		Username: os.Getenv("RABBITMQ_USER"),
+		Password: os.Getenv("RABBITMQ_PASSWORD"),
+		UserPort: os.Getenv("RABBITMQ_USER_PORT"),
+	}
+	rabbitURL := os.Getenv("RABBITMQ_URL")
+	log.Printf("DEBUG: RABBIT_URL = '%s'", rabbitURL)
 	var Config = &Config{
 		Server:   &serverConfig,
 		Database: &databaseConfig,
 		Logger:   &loggerConfig,
 		RabbitMQ: &rabbitMQConfig,
 		Redis:    &redisConfig,
+		Deepgram: &deepgramConfig,
 	}
 	return Config
 }

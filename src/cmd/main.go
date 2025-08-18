@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/go-chi/chi/v5"
 	"net/http"
 	"speechToText/src/api"
 	"speechToText/src/auth"
 	"speechToText/src/config"
 	"speechToText/src/consumer"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func main() {
@@ -19,12 +20,12 @@ func main() {
 	r.With(auth.Middleware).Post("/audio", api.Audio)
 	r.Post("/login", api.Login)
 	r.Post("/register", api.Register)
-	err := http.ListenAndServe(config.CurrentConfig.Server.Port, r)
 	go func() {
 		if err := consumer.ReceiveMessage("queue", ctx); err != nil {
 			fmt.Println("consumer error:", err)
 		}
 	}()
+	err := http.ListenAndServe(":"+config.CurrentConfig.Server.Port, r)
 	if err != nil {
 		panic(err)
 	}
