@@ -2,7 +2,7 @@
 
 ### 🔊 Project Overview
 
-**Speech-to-Text** is a state-of-the-art service for converting speech to text using advanced speech recognition technologies. The project provides accurate audio-to-text conversion capabilities with robust monitoring and management features.
+**Speech-to-Text** is a modern service for converting speech to text using advanced speech recognition technologies. The project provides accurate audio-to-text conversion capabilities with robust monitoring and management features.
 
 ### 🛠️ Technology Stack
 
