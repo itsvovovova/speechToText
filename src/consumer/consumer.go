@@ -2,18 +2,17 @@ package consumer
 
 import (
 	"context"
-	"encoding/json"
-	"github.com/google/uuid"
 	"speechToText/src/db"
 	"speechToText/src/service"
 	"speechToText/src/types"
+
+	"github.com/google/uuid"
 
 	"speechToText/src/config"
 
 	listen "github.com/deepgram/deepgram-go-sdk/pkg/api/listen/v1/rest"
 	interfaces "github.com/deepgram/deepgram-go-sdk/pkg/client/interfaces"
 	client "github.com/deepgram/deepgram-go-sdk/pkg/client/listen"
-	prettyjson "github.com/hokaccha/go-prettyjson"
 )
 
 func CreateTask(username string, request types.AudioRequest) (string, error) {
@@ -30,10 +29,10 @@ func CreateTask(username string, request types.AudioRequest) (string, error) {
 
 func ConvertToText(audioUrl string) (string, error) {
 	ctx := context.Background()
-
+	service.LogDebug("AUDIO URL: %s", audioUrl)
 	options := &interfaces.PreRecordedTranscriptionOptions{
 		Model:    "nova-2",
-		Language: "ru",
+		Language: "en",
 	}
 
 	c := client.NewREST(config.CurrentConfig.Deepgram.ApiKey, &interfaces.ClientOptions{})
@@ -44,17 +43,7 @@ func ConvertToText(audioUrl string) (string, error) {
 		service.LogError("FromURL failed. Err: %v", err)
 		return "", err
 	}
+	rtext := res.Results.Channels[0].Alternatives[0].Transcript
 
-	data, err := json.Marshal(res)
-	if err != nil {
-		service.LogError("json.Marshal failed. Err: %v", err)
-		return "", err
-	}
-
-	prettyJson, err := prettyjson.Format(data)
-	if err != nil {
-		service.LogError("prettyjson.Marshal failed. Err: %v", err)
-		return "", err
-	}
-	return string(prettyJson), nil
+	return rtext, nil
 }

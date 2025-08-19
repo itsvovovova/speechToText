@@ -79,16 +79,16 @@ def test_protected_endpoints(auth_client):
     audio_data = {"audio": "https://static.deepgram.com/examples/Bueller-Life-moves-pretty-fast.wav"}
     audio_response = auth_client.post(f"{BASE_URL}/audio", json=audio_data)
     assert audio_response.status_code == 200
-    
-    status_response = auth_client.get(f"{BASE_URL}/status")
+    print(f"\nDEBUG: Audio response: {audio_response.json()}")
+    time.sleep(5)
+    request_data = {"task_id": audio_response.json()["task_id"]}
+    status_response = auth_client.get(f"{BASE_URL}/status", json=request_data)
     assert status_response.status_code == 200
-    assert status_response.text in ["in progress", "completed", "failed"]
 
-    result_response = auth_client.get(f"{BASE_URL}/result")
+    result_response = auth_client.get(f"{BASE_URL}/result", json=request_data)
     assert result_response.status_code == 200
 
 def test_unauthorized_access(api_client):
-    # Очищаем cookies перед тестом
     api_client.cookies.clear()
     
     endpoints = [

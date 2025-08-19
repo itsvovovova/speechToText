@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"os"
 )
 
@@ -92,8 +91,6 @@ func NewConfig() *Config {
 		Password: os.Getenv("RABBITMQ_PASSWORD"),
 		UserPort: os.Getenv("RABBITMQ_USER_PORT"),
 	}
-	rabbitURL := os.Getenv("RABBITMQ_URL")
-	log.Printf("DEBUG: RABBIT_URL = '%s'", rabbitURL)
 	var Config = &Config{
 		Server:   &serverConfig,
 		Database: &databaseConfig,

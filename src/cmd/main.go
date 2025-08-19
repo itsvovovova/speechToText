@@ -8,16 +8,21 @@ import (
 	"speechToText/src/auth"
 	"speechToText/src/config"
 	"speechToText/src/consumer"
+	"speechToText/src/metrics"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
+	metrics := metrics.NewMetrics()
 	var r = chi.NewRouter()
 	ctx := context.Background()
+	r.Use(metrics.Middleware)
 	r.With(auth.Middleware).Get("/status", api.Status)
 	r.With(auth.Middleware).Get("/result", api.Result)
 	r.With(auth.Middleware).Post("/audio", api.Audio)
+	r.With(auth.Middleware).Get("/metrics", promhttp.Handler().ServeHTTP)
 	r.Post("/login", api.Login)
 	r.Post("/register", api.Register)
 	go func() {

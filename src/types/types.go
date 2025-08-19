@@ -28,3 +28,15 @@ type QueueRabbitMQ struct {
 	Channel    *amqp.Channel
 	Connection *amqp.Connection
 }
+
+type GetInfoResponse struct {
+	Task_id string `json:"task_id"`
+}
+
+type GetResultResponse struct {
+	Result string `json:"result"`
+}
+
+type GetStatusResponse struct {
+	Status string `json:"status"`
+}

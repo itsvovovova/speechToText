@@ -67,5 +67,23 @@ services:
       server:
         condition: service_started
     command: [ "sh", "-c", "sleep 10 && pip install pytest requests && pytest src/tests/ -v" ]
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
+
 volumes:
+  grafana-storage:
   postgres_data:

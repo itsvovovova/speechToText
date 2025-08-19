@@ -40,8 +40,15 @@ func Audio(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	_, err = w.Write([]byte(taskID))
+	taskResponse := types.GetInfoResponse{
+		Task_id: taskID,
+	}
+	response, err := json.Marshal(taskResponse)
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if _, err := w.Write(response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -67,8 +74,22 @@ func Status(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	service.LogDebug("Username: %s", username)
-
-	status, err := db.GetStatusTask(username)
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	var request types.GetInfoResponse
+	err = json.Unmarshal(data, &request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	exist, err := db.ExistTask(request.Task_id, username)
+	if !exist {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+	}
+	status, err := db.GetStatusTask(request.Task_id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			service.LogDebug("No tasks found for user")
@@ -83,7 +104,15 @@ func Status(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	service.LogDebug("Status: %s", status)
-	if _, err := w.Write([]byte(status)); err != nil {
+	statusResponse := types.GetStatusResponse{
+		Status: status,
+	}
+	response, err := json.Marshal(statusResponse)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if _, err := w.Write(response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -109,8 +138,22 @@ func Result(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	service.LogDebug("Username: %s", username)
-
-	result, err := db.GetResultTask(username)
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	var request types.GetInfoResponse
+	err = json.Unmarshal(data, &request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	exist, err := db.ExistTask(request.Task_id, username)
+	if !exist {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+	}
+	result, err := db.GetResultTask(request.Task_id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			service.LogDebug("No results found for user")
@@ -125,7 +168,15 @@ func Result(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	service.LogDebug("Result: %s", result)
-	if _, err := w.Write([]byte(result)); err != nil {
+	resultResponse := types.GetResultResponse{
+		Result: result,
+	}
+	response, err := json.Marshal(resultResponse)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if _, err := w.Write(response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
