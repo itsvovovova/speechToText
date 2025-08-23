@@ -1,10 +1,12 @@
 ## Speech-to-Text Recognition Service
 
-### 🔊 Project Overview
+image.png
+
+### Project Overview
 
 **Speech-to-Text** is a modern service for converting speech to text using advanced speech recognition technologies. The project provides accurate audio-to-text conversion capabilities with robust monitoring and management features.
 
-### 🛠️ Technology Stack
+### Technology Stack
 
 * **Programming Language**: Go (Golang)
 * **Database**: PostgreSQL
@@ -16,24 +18,14 @@
 * **Core Components**:
     go-chi
 
-### 🎯 Key Features
-
-* **Offline Recognition** capabilities
-* **Multi-language Support**
-* **High Accuracy** in audio-to-text conversion
-* **Asynchronous Processing** using RabbitMQ
-* **REST API** for seamless integration
-* **Monitoring & Alerting** via Prometheus/Grafana
-* **External API** integration for enhanced functionality
-
-### 🔗 API Endpoints
+### API Endpoints
 
 * **POST /audio** — submit audio URL for recognition
 
 * **GET /status** — check processing status
 * **GET /result** — retrieve recognition result
 
-### 🎯 Audio Requirements
+### Audio Requirements
 
 * **Supported Formats**:
     * WAV (recommended)
@@ -42,7 +34,7 @@
     * OGG
     * AAC
 
-### 🛠️ Installation & Setup
+### Installation & Setup
 
 1. **Clone the repository**:
 ```bash
