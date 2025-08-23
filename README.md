@@ -1,6 +1,7 @@
 ## Speech-to-Text Recognition Service
 
-image.png
+<img width="1524" height="305" alt="image" src="https://github.com/user-attachments/assets/3586c131-5df5-4c08-81d3-01e49b0a9701" />
+
 
 ### Project Overview
 
