@@ -29,6 +29,7 @@ type DatabaseConfig struct {
 	Port         string
 	DatabaseName string
 	SSLMode      string
+	MigrationPath    string
 }
 
 type LoggerConfig struct {
@@ -62,6 +63,7 @@ func NewConfig() *Config {
 		Name:         os.Getenv("DB_NAME"),
 		DatabaseName: os.Getenv("DB_NAME"),
 		SSLMode:      os.Getenv("DB_SSL_MODE"),
+		MigrationPath: os.Getenv("DB_MIGRATION_PATH"),
 	}
 
 	var loggerConfig = LoggerConfig{

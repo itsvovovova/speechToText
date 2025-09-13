@@ -22,7 +22,6 @@
 ### API Endpoints
 
 * **POST /audio** — submit audio URL for recognition
-
 * **GET /status** — check processing status
 * **GET /result** — retrieve recognition result
 

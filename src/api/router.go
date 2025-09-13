@@ -13,6 +13,19 @@ import (
 	"speechToText/src/types"
 )
 
+// Audio godoc
+// @Summary Загрузка аудио для обработки
+// @Description Отправляет аудио файл для преобразования в текст
+// @Tags audio
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param request body types.AudioRequest true "Аудио данные"
+// @Success 200 {object} types.GetInfoResponse "ID задачи создана"
+// @Failure 400 {string} string "Ошибка валидации"
+// @Failure 401 {string} string "Не авторизован"
+// @Failure 500 {string} string "Внутренняя ошибка сервера"
+// @Router /audio [post]
 func Audio(w http.ResponseWriter, r *http.Request) {
 	session, err := cache.SessionManager.SessionStart(r.Context(), w, r)
 	if err != nil {
@@ -54,6 +67,20 @@ func Audio(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Status godoc
+// @Summary Получение статуса задачи
+// @Description Возвращает текущий статус обработки аудио
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param request body types.GetInfoResponse true "ID задачи"
+// @Success 200 {object} types.GetStatusResponse "Статус задачи"
+// @Failure 400 {string} string "Ошибка валидации"
+// @Failure 401 {string} string "Не авторизован"
+// @Failure 403 {string} string "Доступ запрещен"
+// @Failure 500 {string} string "Внутренняя ошибка сервера"
+// @Router /status [get]
 func Status(w http.ResponseWriter, r *http.Request) {
 	service.LogInfo("=== STATUS START ===")
 	defer service.LogInfo("=== STATUS END ===")
@@ -118,6 +145,20 @@ func Status(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Result godoc
+// @Summary Получение результата обработки
+// @Description Возвращает результат преобразования аудио в текст
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param request body types.GetInfoResponse true "ID задачи"
+// @Success 200 {object} types.GetResultResponse "Результат обработки"
+// @Failure 400 {string} string "Ошибка валидации"
+// @Failure 401 {string} string "Не авторизован"
+// @Failure 403 {string} string "Доступ запрещен"
+// @Failure 500 {string} string "Внутренняя ошибка сервера"
+// @Router /result [get]
 func Result(w http.ResponseWriter, r *http.Request) {
 	service.LogInfo("=== RESULT START ===")
 	defer service.LogInfo("=== RESULT END ===")

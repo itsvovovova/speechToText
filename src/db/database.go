@@ -6,6 +6,9 @@ import (
 	_ "github.com/lib/pq"
 	"log"
 	"speechToText/src/config"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 var db *sql.DB
@@ -15,13 +18,14 @@ func init() {
 }
 
 func InitDB() *sql.DB {
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		config.CurrentConfig.Database.Host,
-		config.CurrentConfig.Database.Port,
+	connURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		config.CurrentConfig.Database.Username,
 		config.CurrentConfig.Database.Password,
+		config.CurrentConfig.Database.Host,
+		config.CurrentConfig.Database.Port,
 		config.CurrentConfig.Database.Name)
-	db, err := sql.Open("postgres", connStr)
+	
+	db, err := sql.Open("postgres", connURL)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -29,26 +33,17 @@ func InitDB() *sql.DB {
 		_ = db.Close()
 		log.Fatal("Db connection error:", err)
 	}
-	var query1 = `
-    CREATE TABLE IF NOT EXISTS users (
-        username VARCHAR(1000) NOT NULL,
-        password VARCHAR(1000) NOT NULL
-    );`
-	_, err = db.Exec(query1)
+	
+	// Для миграций используем тот же URL
+	m, err := migrate.New(
+		config.CurrentConfig.Database.MigrationPath,
+		connURL)
 	if err != nil {
-		log.Fatal("Db create table error:", err)
+		log.Fatal("Failed to create migration instance:", err)
 	}
-	var query2 = `
-    CREATE TABLE IF NOT EXISTS tasks (
-        username VARCHAR(1000) NOT NULL,
-        task_id VARCHAR(1000) NOT NULL,
-        audio VARCHAR(1000) NOT NULL,
-        status VARCHAR(1000) NOT NULL,
-        result VARCHAR(1000)
-    );`
-	_, err = db.Exec(query2)
-	if err != nil {
-		log.Fatal("Db error:", err)
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatal("Failed to apply migrations:", err)
 	}
+	log.Println("Database migrations completed successfully")
 	return db
 }
