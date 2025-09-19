@@ -27,10 +27,41 @@ definitions:
       status:
         type: string
     type: object
+  types.PaginationResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  types.TaskInfo:
+    properties:
+      created:
+        type: string
+      status:
+        type: string
+      task_id:
+        type: string
+      username:
+        type: string
+    type: object
+  types.TaskListResponse:
+    properties:
+      pagination:
+        $ref: '#/definitions/types.PaginationResponse'
+      tasks:
+        items:
+          $ref: '#/definitions/types.TaskInfo'
+        type: array
+    type: object
 host: localhost:8080
 info:
   contact: {}
-  description: API для преобразования речи в текст
+  description: Speech to Text API
   title: Speech to Text API
   version: "1.0"
 paths:
@@ -38,9 +69,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Отправляет аудио файл для преобразования в текст
+      description: Sends audio file for speech to text conversion
       parameters:
-      - description: Аудио данные
+      - description: Audio data
         in: body
         name: request
         required: true
@@ -50,33 +81,33 @@ paths:
       - application/json
       responses:
         "200":
-          description: ID задачи создана
+          description: Task ID created
           schema:
             $ref: '#/definitions/types.GetInfoResponse'
         "400":
-          description: Ошибка валидации
+          description: Validation error
           schema:
             type: string
         "401":
-          description: Не авторизован
+          description: Unauthorized
           schema:
             type: string
         "500":
-          description: Внутренняя ошибка сервера
+          description: Internal server error
           schema:
             type: string
       security:
       - ApiKeyAuth: []
-      summary: Загрузка аудио для обработки
+      summary: Upload audio for processing
       tags:
       - audio
   /login:
     post:
       consumes:
       - application/json
-      description: Авторизует пользователя и создает сессию
+      description: Authenticates user and creates session
       parameters:
-      - description: Данные для авторизации
+      - description: Authentication data
         in: body
         name: request
         required: true
@@ -86,33 +117,33 @@ paths:
       - application/json
       responses:
         "200":
-          description: Успешная авторизация
+          description: Successful authentication
           schema:
             additionalProperties:
               type: string
             type: object
         "400":
-          description: Ошибка валидации
+          description: Validation error
           schema:
             type: string
         "401":
-          description: Неверные учетные данные
+          description: Invalid credentials
           schema:
             type: string
         "500":
-          description: Внутренняя ошибка сервера
+          description: Internal server error
           schema:
             type: string
-      summary: Авторизация пользователя
+      summary: User authentication
       tags:
       - auth
   /register:
     post:
       consumes:
       - application/json
-      description: Создает нового пользователя в системе
+      description: Creates a new user in the system
       parameters:
-      - description: Данные для регистрации
+      - description: Registration data
         in: body
         name: request
         required: true
@@ -122,29 +153,29 @@ paths:
       - application/json
       responses:
         "200":
-          description: Успешная регистрация
+          description: Successful registration
           schema:
             additionalProperties:
               type: string
             type: object
         "400":
-          description: Ошибка валидации
+          description: Validation error
           schema:
             type: string
         "500":
-          description: Внутренняя ошибка сервера
+          description: Internal server error
           schema:
             type: string
-      summary: Регистрация пользователя
+      summary: User registration
       tags:
       - auth
   /result:
     get:
       consumes:
       - application/json
-      description: Возвращает результат преобразования аудио в текст
+      description: Returns audio to text conversion result
       parameters:
-      - description: ID задачи
+      - description: Task ID
         in: body
         name: request
         required: true
@@ -154,37 +185,37 @@ paths:
       - application/json
       responses:
         "200":
-          description: Результат обработки
+          description: Processing result
           schema:
             $ref: '#/definitions/types.GetResultResponse'
         "400":
-          description: Ошибка валидации
+          description: Validation error
           schema:
             type: string
         "401":
-          description: Не авторизован
+          description: Unauthorized
           schema:
             type: string
         "403":
-          description: Доступ запрещен
+          description: Forbidden
           schema:
             type: string
         "500":
-          description: Внутренняя ошибка сервера
+          description: Internal server error
           schema:
             type: string
       security:
       - ApiKeyAuth: []
-      summary: Получение результата обработки
+      summary: Get processing result
       tags:
       - tasks
   /status:
     get:
       consumes:
       - application/json
-      description: Возвращает текущий статус обработки аудио
+      description: Returns current audio processing status
       parameters:
-      - description: ID задачи
+      - description: Task ID
         in: body
         name: request
         required: true
@@ -194,28 +225,68 @@ paths:
       - application/json
       responses:
         "200":
-          description: Статус задачи
+          description: Task status
           schema:
             $ref: '#/definitions/types.GetStatusResponse'
         "400":
-          description: Ошибка валидации
+          description: Validation error
           schema:
             type: string
         "401":
-          description: Не авторизован
+          description: Unauthorized
           schema:
             type: string
         "403":
-          description: Доступ запрещен
+          description: Forbidden
           schema:
             type: string
         "500":
-          description: Внутренняя ошибка сервера
+          description: Internal server error
           schema:
             type: string
       security:
       - ApiKeyAuth: []
-      summary: Получение статуса задачи
+      summary: Get task status
+      tags:
+      - tasks
+  /tasks:
+    get:
+      consumes:
+      - application/json
+      description: Returns user tasks list with pagination
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Tasks list
+          schema:
+            $ref: '#/definitions/types.TaskListResponse'
+        "400":
+          description: Validation error
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get tasks list with pagination
       tags:
       - tasks
 securityDefinitions:

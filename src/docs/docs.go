@@ -22,7 +22,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Отправляет аудио файл для преобразования в текст",
+                "description": "Sends audio file for speech to text conversion",
                 "consumes": [
                     "application/json"
                 ],
@@ -32,10 +32,10 @@ const docTemplate = `{
                 "tags": [
                     "audio"
                 ],
-                "summary": "Загрузка аудио для обработки",
+                "summary": "Upload audio for processing",
                 "parameters": [
                     {
-                        "description": "Аудио данные",
+                        "description": "Audio data",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -46,25 +46,25 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "ID задачи создана",
+                        "description": "Task ID created",
                         "schema": {
                             "$ref": "#/definitions/types.GetInfoResponse"
                         }
                     },
                     "400": {
-                        "description": "Ошибка валидации",
+                        "description": "Validation error",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "401": {
-                        "description": "Не авторизован",
+                        "description": "Unauthorized",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "500": {
-                        "description": "Внутренняя ошибка сервера",
+                        "description": "Internal server error",
                         "schema": {
                             "type": "string"
                         }
@@ -74,7 +74,7 @@ const docTemplate = `{
         },
         "/login": {
             "post": {
-                "description": "Авторизует пользователя и создает сессию",
+                "description": "Authenticates user and creates session",
                 "consumes": [
                     "application/json"
                 ],
@@ -84,10 +84,10 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "Авторизация пользователя",
+                "summary": "User authentication",
                 "parameters": [
                     {
-                        "description": "Данные для авторизации",
+                        "description": "Authentication data",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -98,7 +98,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Успешная авторизация",
+                        "description": "Successful authentication",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -107,19 +107,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Ошибка валидации",
+                        "description": "Validation error",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "401": {
-                        "description": "Неверные учетные данные",
+                        "description": "Invalid credentials",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "500": {
-                        "description": "Внутренняя ошибка сервера",
+                        "description": "Internal server error",
                         "schema": {
                             "type": "string"
                         }
@@ -129,7 +129,7 @@ const docTemplate = `{
         },
         "/register": {
             "post": {
-                "description": "Создает нового пользователя в системе",
+                "description": "Creates a new user in the system",
                 "consumes": [
                     "application/json"
                 ],
@@ -139,10 +139,10 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "Регистрация пользователя",
+                "summary": "User registration",
                 "parameters": [
                     {
-                        "description": "Данные для регистрации",
+                        "description": "Registration data",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -153,7 +153,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Успешная регистрация",
+                        "description": "Successful registration",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -162,13 +162,13 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Ошибка валидации",
+                        "description": "Validation error",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "500": {
-                        "description": "Внутренняя ошибка сервера",
+                        "description": "Internal server error",
                         "schema": {
                             "type": "string"
                         }
@@ -183,7 +183,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Возвращает результат преобразования аудио в текст",
+                "description": "Returns audio to text conversion result",
                 "consumes": [
                     "application/json"
                 ],
@@ -193,10 +193,10 @@ const docTemplate = `{
                 "tags": [
                     "tasks"
                 ],
-                "summary": "Получение результата обработки",
+                "summary": "Get processing result",
                 "parameters": [
                     {
-                        "description": "ID задачи",
+                        "description": "Task ID",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -207,31 +207,31 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Результат обработки",
+                        "description": "Processing result",
                         "schema": {
                             "$ref": "#/definitions/types.GetResultResponse"
                         }
                     },
                     "400": {
-                        "description": "Ошибка валидации",
+                        "description": "Validation error",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "401": {
-                        "description": "Не авторизован",
+                        "description": "Unauthorized",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "403": {
-                        "description": "Доступ запрещен",
+                        "description": "Forbidden",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "500": {
-                        "description": "Внутренняя ошибка сервера",
+                        "description": "Internal server error",
                         "schema": {
                             "type": "string"
                         }
@@ -246,7 +246,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Возвращает текущий статус обработки аудио",
+                "description": "Returns current audio processing status",
                 "consumes": [
                     "application/json"
                 ],
@@ -256,10 +256,10 @@ const docTemplate = `{
                 "tags": [
                     "tasks"
                 ],
-                "summary": "Получение статуса задачи",
+                "summary": "Get task status",
                 "parameters": [
                     {
-                        "description": "ID задачи",
+                        "description": "Task ID",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -270,31 +270,93 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Статус задачи",
+                        "description": "Task status",
                         "schema": {
                             "$ref": "#/definitions/types.GetStatusResponse"
                         }
                     },
                     "400": {
-                        "description": "Ошибка валидации",
+                        "description": "Validation error",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "401": {
-                        "description": "Не авторизован",
+                        "description": "Unauthorized",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "403": {
-                        "description": "Доступ запрещен",
+                        "description": "Forbidden",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "500": {
-                        "description": "Внутренняя ошибка сервера",
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns user tasks list with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Get tasks list with pagination",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Page size",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tasks list",
+                        "schema": {
+                            "$ref": "#/definitions/types.TaskListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "type": "string"
                         }
@@ -346,6 +408,54 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "types.PaginationResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "types.TaskInfo": {
+            "type": "object",
+            "properties": {
+                "created": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.TaskListResponse": {
+            "type": "object",
+            "properties": {
+                "pagination": {
+                    "$ref": "#/definitions/types.PaginationResponse"
+                },
+                "tasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.TaskInfo"
+                    }
+                }
+            }
         }
     },
     "securityDefinitions": {
@@ -364,7 +474,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Speech to Text API",
-	Description:      "API для преобразования речи в текст",
+	Description:      "Speech to Text API",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

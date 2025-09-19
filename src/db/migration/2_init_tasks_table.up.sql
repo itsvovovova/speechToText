@@ -3,4 +3,6 @@ CREATE TABLE IF NOT EXISTS tasks (
         task_id VARCHAR(1000) NOT NULL,
         audio VARCHAR(1000) NOT NULL,
         status VARCHAR(1000) NOT NULL,
-        result VARCHAR(1000))
+        result VARCHAR(1000),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)

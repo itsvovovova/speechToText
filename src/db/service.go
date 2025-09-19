@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"speechToText/src/service"
+	"speechToText/src/types"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -100,4 +102,85 @@ func ExistTask(taskID string, username string) (bool, error) {
 		return false, err
 	}
 	return exists, nil
+}
+
+func GetTasksWithPagination(username string, page, pageSize int) ([]types.TaskInfo, int64, error) {
+	offset := (page - 1) * pageSize
+
+	var total int64
+	countQuery := "SELECT COUNT(*) FROM tasks WHERE username = $1"
+	err := db.QueryRow(countQuery, username).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	query := `
+		SELECT task_id, username, status, created_at 
+		FROM tasks 
+		WHERE username = $1 
+		ORDER BY created_at DESC 
+		LIMIT $2 OFFSET $3
+	`
+
+	rows, err := db.Query(query, username, pageSize, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var tasks []types.TaskInfo
+	for rows.Next() {
+		var task types.TaskInfo
+		var createdAt time.Time
+
+		err := rows.Scan(&task.TaskID, &task.Username, &task.Status, &createdAt)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		task.Created = createdAt.Format(time.RFC3339)
+		tasks = append(tasks, task)
+	}
+
+	return tasks, total, nil
+}
+
+func GetAllTasksWithPagination(page, pageSize int) ([]types.TaskInfo, int64, error) {
+	offset := (page - 1) * pageSize
+
+	var total int64
+	countQuery := "SELECT COUNT(*) FROM tasks"
+	err := db.QueryRow(countQuery).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	query := `
+		SELECT task_id, username, status, created_at 
+		FROM tasks 
+		ORDER BY created_at DESC 
+		LIMIT $1 OFFSET $2
+	`
+
+	rows, err := db.Query(query, pageSize, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var tasks []types.TaskInfo
+	for rows.Next() {
+		var task types.TaskInfo
+		var createdAt time.Time
+
+		err := rows.Scan(&task.TaskID, &task.Username, &task.Status, &createdAt)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		task.Created = createdAt.Format(time.RFC3339)
+		tasks = append(tasks, task)
+	}
+
+	return tasks, total, nil
 }

@@ -40,3 +40,27 @@ type GetResultResponse struct {
 type GetStatusResponse struct {
 	Status string `json:"status"`
 }
+
+type PaginationRequest struct {
+	Page     int `json:"page" form:"page" binding:"min=1"`
+	PageSize int `json:"page_size" form:"page_size" binding:"min=1,max=100"`
+}
+
+type PaginationResponse struct {
+	Page       int   `json:"page"`
+	PageSize   int   `json:"page_size"`
+	Total      int64 `json:"total"`
+	TotalPages int   `json:"total_pages"`
+}
+
+type TaskListResponse struct {
+	Tasks      []TaskInfo         `json:"tasks"`
+	Pagination PaginationResponse `json:"pagination"`
+}
+
+type TaskInfo struct {
+	TaskID   string `json:"task_id"`
+	Username string `json:"username"`
+	Status   string `json:"status"`
+	Created  string `json:"created"`
+}

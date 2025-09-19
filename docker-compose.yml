@@ -56,17 +56,21 @@ services:
         condition: service_healthy
       postgres:
         condition: service_started
-  tester:
-    image: python:3.9-slim
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.tests
     env_file:
       - .env
-    volumes:
-      - ./:/app
-    working_dir: /app
     depends_on:
       server:
         condition: service_started
-    command: [ "sh", "-c", "sleep 10 && pip install pytest requests && pytest src/tests/ -v" ]
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   prometheus:
     image: prom/prometheus:latest

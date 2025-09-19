@@ -11,20 +11,21 @@ import (
 	"speechToText/src/db"
 	"speechToText/src/service"
 	"speechToText/src/types"
+	"strconv"
 )
 
 // Audio godoc
-// @Summary Загрузка аудио для обработки
-// @Description Отправляет аудио файл для преобразования в текст
+// @Summary Upload audio for processing
+// @Description Sends audio file for speech to text conversion
 // @Tags audio
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param request body types.AudioRequest true "Аудио данные"
-// @Success 200 {object} types.GetInfoResponse "ID задачи создана"
-// @Failure 400 {string} string "Ошибка валидации"
-// @Failure 401 {string} string "Не авторизован"
-// @Failure 500 {string} string "Внутренняя ошибка сервера"
+// @Param request body types.AudioRequest true "Audio data"
+// @Success 200 {object} types.GetInfoResponse "Task ID created"
+// @Failure 400 {string} string "Validation error"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal server error"
 // @Router /audio [post]
 func Audio(w http.ResponseWriter, r *http.Request) {
 	session, err := cache.SessionManager.SessionStart(r.Context(), w, r)
@@ -68,18 +69,18 @@ func Audio(w http.ResponseWriter, r *http.Request) {
 }
 
 // Status godoc
-// @Summary Получение статуса задачи
-// @Description Возвращает текущий статус обработки аудио
+// @Summary Get task status
+// @Description Returns current audio processing status
 // @Tags tasks
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param request body types.GetInfoResponse true "ID задачи"
-// @Success 200 {object} types.GetStatusResponse "Статус задачи"
-// @Failure 400 {string} string "Ошибка валидации"
-// @Failure 401 {string} string "Не авторизован"
-// @Failure 403 {string} string "Доступ запрещен"
-// @Failure 500 {string} string "Внутренняя ошибка сервера"
+// @Param request body types.GetInfoResponse true "Task ID"
+// @Success 200 {object} types.GetStatusResponse "Task status"
+// @Failure 400 {string} string "Validation error"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 403 {string} string "Forbidden"
+// @Failure 500 {string} string "Internal server error"
 // @Router /status [get]
 func Status(w http.ResponseWriter, r *http.Request) {
 	service.LogInfo("=== STATUS START ===")
@@ -146,18 +147,18 @@ func Status(w http.ResponseWriter, r *http.Request) {
 }
 
 // Result godoc
-// @Summary Получение результата обработки
-// @Description Возвращает результат преобразования аудио в текст
+// @Summary Get processing result
+// @Description Returns audio to text conversion result
 // @Tags tasks
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param request body types.GetInfoResponse true "ID задачи"
-// @Success 200 {object} types.GetResultResponse "Результат обработки"
-// @Failure 400 {string} string "Ошибка валидации"
-// @Failure 401 {string} string "Не авторизован"
-// @Failure 403 {string} string "Доступ запрещен"
-// @Failure 500 {string} string "Внутренняя ошибка сервера"
+// @Param request body types.GetInfoResponse true "Task ID"
+// @Success 200 {object} types.GetResultResponse "Processing result"
+// @Failure 400 {string} string "Validation error"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 403 {string} string "Forbidden"
+// @Failure 500 {string} string "Internal server error"
 // @Router /result [get]
 func Result(w http.ResponseWriter, r *http.Request) {
 	service.LogInfo("=== RESULT START ===")
@@ -218,6 +219,86 @@ func Result(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := w.Write(response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+// Tasks godoc
+// @Summary Get tasks list with pagination
+// @Description Returns user tasks list with pagination
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(10)
+// @Success 200 {object} types.TaskListResponse "Tasks list"
+// @Failure 400 {string} string "Validation error"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal server error"
+// @Router /tasks [get]
+func Tasks(w http.ResponseWriter, r *http.Request) {
+	service.LogInfo("=== TASKS START ===")
+	defer service.LogInfo("=== TASKS END ===")
+
+	w.Header().Set("Content-Type", "application/json")
+	session, err := cache.SessionManager.SessionStart(r.Context(), w, r)
+	if err != nil {
+		service.LogError("Session error: %v", err)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	username, err := session.Get(r.Context(), "username")
+	if err != nil {
+		service.LogError("Username error: %v", err)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	page := 1
+	pageSize := 10
+
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	if pageSizeStr := r.URL.Query().Get("page_size"); pageSizeStr != "" {
+		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 && ps <= 100 {
+			pageSize = ps
+		}
+	}
+
+	tasks, total, err := db.GetTasksWithPagination(username, page, pageSize)
+	if err != nil {
+		service.LogError("DB error: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	totalPages := int((total + int64(pageSize) - 1) / int64(pageSize))
+	response := types.TaskListResponse{
+		Tasks: tasks,
+		Pagination: types.PaginationResponse{
+			Page:       page,
+			PageSize:   pageSize,
+			Total:      total,
+			TotalPages: totalPages,
+		},
+	}
+
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		service.LogError("JSON marshal error: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if _, err := w.Write(responseJSON); err != nil {
+		service.LogError("Write error: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

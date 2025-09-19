@@ -10,15 +10,15 @@ import (
 )
 
 // Register godoc
-// @Summary Регистрация пользователя
-// @Description Создает нового пользователя в системе
+// @Summary User registration
+// @Description Creates a new user in the system
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body types.AuthRequest true "Данные для регистрации"
-// @Success 200 {object} map[string]string "Успешная регистрация"
-// @Failure 400 {string} string "Ошибка валидации"
-// @Failure 500 {string} string "Внутренняя ошибка сервера"
+// @Param request body types.AuthRequest true "Registration data"
+// @Success 200 {object} map[string]string "Successful registration"
+// @Failure 400 {string} string "Validation error"
+// @Failure 500 {string} string "Internal server error"
 // @Router /register [post]
 func Register(w http.ResponseWriter, r *http.Request) {
 	user, err := service.ReadAuthRequest(r)
@@ -62,16 +62,16 @@ func Register(w http.ResponseWriter, r *http.Request) {
 }
 
 // Login godoc
-// @Summary Авторизация пользователя
-// @Description Авторизует пользователя и создает сессию
+// @Summary User authentication
+// @Description Authenticates user and creates session
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body types.AuthRequest true "Данные для авторизации"
-// @Success 200 {object} map[string]string "Успешная авторизация"
-// @Failure 400 {string} string "Ошибка валидации"
-// @Failure 401 {string} string "Неверные учетные данные"
-// @Failure 500 {string} string "Внутренняя ошибка сервера"
+// @Param request body types.AuthRequest true "Authentication data"
+// @Success 200 {object} map[string]string "Successful authentication"
+// @Failure 400 {string} string "Validation error"
+// @Failure 401 {string} string "Invalid credentials"
+// @Failure 500 {string} string "Internal server error"
 // @Router /login [post]
 func Login(w http.ResponseWriter, r *http.Request) {
 	service.LogInfo("=== LOGIN START ===")

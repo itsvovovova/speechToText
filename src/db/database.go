@@ -3,12 +3,13 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/lib/pq"
 	"log"
 	"speechToText/src/config"
+
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/lib/pq"
 )
 
 var db *sql.DB
@@ -24,7 +25,7 @@ func InitDB() *sql.DB {
 		config.CurrentConfig.Database.Host,
 		config.CurrentConfig.Database.Port,
 		config.CurrentConfig.Database.Name)
-	
+
 	db, err := sql.Open("postgres", connURL)
 	if err != nil {
 		log.Fatal(err)
@@ -33,8 +34,7 @@ func InitDB() *sql.DB {
 		_ = db.Close()
 		log.Fatal("Db connection error:", err)
 	}
-	
-	// Для миграций используем тот же URL
+
 	m, err := migrate.New(
 		config.CurrentConfig.Database.MigrationPath,
 		connURL)
