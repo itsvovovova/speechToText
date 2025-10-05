@@ -12,6 +12,7 @@ import (
 	"speechToText/src/consumer"
 	"speechToText/src/docs"
 	"speechToText/src/metrics"
+	"sync"
 	"syscall"
 	"time"
 
@@ -38,7 +39,6 @@ func main() {
 
 	metrics := metrics.NewMetrics()
 	var r = chi.NewRouter()
-	ctx := context.Background()
 	r.Use(metrics.Middleware)
 
 	r.Get("/swagger/*", httpSwagger.Handler(
@@ -51,19 +51,30 @@ func main() {
 	r.With(auth.Middleware).Get("/metrics", promhttp.Handler().ServeHTTP)
 	r.Post("/login", api.Login)
 	r.Post("/register", api.Register)
+	// Graceful shutdown setup
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var wg sync.WaitGroup
+
+	// Start consumer
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		if err := consumer.ReceiveMessage("queue", ctx); err != nil {
 			fmt.Println("consumer error:", err)
 		}
 	}()
+
+	// Start HTTP server
 	server := &http.Server{
 		Addr:    ":" + config.CurrentConfig.Server.Port,
 		Handler: r,
 	}
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		fmt.Printf("Server started on port %s\n", config.CurrentConfig.Server.Port)
 		fmt.Printf("Swagger UI: http://localhost:%s/swagger/index.html\n", config.CurrentConfig.Server.Port)
 
@@ -72,14 +83,19 @@ func main() {
 		}
 	}()
 
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	fmt.Println("Received shutdown signal, stopping server...")
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	cancel() // Stop consumer
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
+
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		fmt.Printf("Error stopping server: %v\n", err)
-	} else {
-		fmt.Println("Server stopped successfully")
 	}
+
+	wg.Wait()
+	fmt.Println("Server stopped successfully")
 }

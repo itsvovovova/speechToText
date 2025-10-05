@@ -55,13 +55,14 @@ services:
       rabbitmq:
         condition: service_healthy
       postgres:
-        condition: service_started
+        condition: service_healthy
   tests:
     build:
       context: .
-      dockerfile: Dockerfile.tests
+      dockerfile: Dockerfile
     env_file:
       - .env
+    command: ["go", "test", "./tests/go", "-v"]
     depends_on:
       server:
         condition: service_started
