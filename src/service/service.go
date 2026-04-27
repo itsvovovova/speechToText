@@ -26,16 +26,15 @@ func ReadAuthRequest(r *http.Request) (types.AuthRequest, error) {
 	if err != nil {
 		return types.AuthRequest{}, err
 	}
-	LogDebug("Received data: %s", string(data))
 	var authData types.AuthRequest
-	err = json.Unmarshal(data, &authData)
-	if err != nil {
+	if err = json.Unmarshal(data, &authData); err != nil {
 		return types.AuthRequest{}, err
 	}
-	LogDebug("Parsed - Username='%s', Password='%s'", authData.Username, authData.Password)
 	if authData.Username == "" || authData.Password == "" {
-		LogDebug("Validation failed - empty fields")
 		return types.AuthRequest{}, fmt.Errorf("username and password are required")
+	}
+	if len(authData.Password) < 8 {
+		return types.AuthRequest{}, fmt.Errorf("password must be at least 8 characters")
 	}
 	return authData, nil
 }

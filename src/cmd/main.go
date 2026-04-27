@@ -11,7 +11,7 @@ import (
 	"speechToText/src/config"
 	"speechToText/src/consumer"
 	"speechToText/src/docs"
-	"speechToText/src/metrics"
+	appmetrics "speechToText/src/metrics"
 	"sync"
 	"syscall"
 	"time"
@@ -37,27 +37,34 @@ func main() {
 	docs.SwaggerInfo.Host = "localhost:" + config.CurrentConfig.Server.Port
 	docs.SwaggerInfo.BasePath = "/"
 
-	metrics := metrics.NewMetrics()
-	var r = chi.NewRouter()
-	r.Use(metrics.Middleware)
+	m := appmetrics.NewMetrics()
+	r := chi.NewRouter()
+	r.Use(m.Middleware)
 
 	r.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL(fmt.Sprintf("http://localhost:%s/swagger/doc.json", config.CurrentConfig.Server.Port)),
 	))
+
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	r.Get("/metrics", promhttp.Handler().ServeHTTP)
+
+	r.Post("/register", api.Register)
+	r.Post("/login", api.Login)
+
+	r.With(auth.Middleware).Post("/logout", api.Logout)
+	r.With(auth.Middleware).Post("/audio", api.Audio)
 	r.With(auth.Middleware).Get("/status", api.Status)
 	r.With(auth.Middleware).Get("/result", api.Result)
-	r.With(auth.Middleware).Post("/audio", api.Audio)
 	r.With(auth.Middleware).Get("/tasks", api.Tasks)
-	r.With(auth.Middleware).Get("/metrics", promhttp.Handler().ServeHTTP)
-	r.Post("/login", api.Login)
-	r.Post("/register", api.Register)
-	// Graceful shutdown setup
+	r.With(auth.Middleware).Delete("/tasks/{id}", api.DeleteTask)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	var wg sync.WaitGroup
 
-	// Start consumer
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -66,10 +73,12 @@ func main() {
 		}
 	}()
 
-	// Start HTTP server
 	server := &http.Server{
-		Addr:    ":" + config.CurrentConfig.Server.Port,
-		Handler: r,
+		Addr:         ":" + config.CurrentConfig.Server.Port,
+		Handler:      r,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	wg.Add(1)
@@ -77,7 +86,6 @@ func main() {
 		defer wg.Done()
 		fmt.Printf("Server started on port %s\n", config.CurrentConfig.Server.Port)
 		fmt.Printf("Swagger UI: http://localhost:%s/swagger/index.html\n", config.CurrentConfig.Server.Port)
-
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Server error: %v\n", err)
 		}
@@ -88,7 +96,7 @@ func main() {
 	<-quit
 	fmt.Println("Received shutdown signal, stopping server...")
 
-	cancel() // Stop consumer
+	cancel()
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 

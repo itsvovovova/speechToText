@@ -1,3 +1,4 @@
+/main
 /config/
 /bin/
 /out/
@@ -20,3 +21,4 @@
 *.swo
 .DS_Store
 Thumbs.db
+claude.txt

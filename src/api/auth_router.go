@@ -1,8 +1,6 @@
 package api
 
 import (
-	"encoding/json"
-
 	"net/http"
 	"speechToText/src/cache"
 	"speechToText/src/db"
@@ -21,6 +19,8 @@ import (
 // @Failure 500 {string} string "Internal server error"
 // @Router /register [post]
 func Register(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	user, err := service.ReadAuthRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -28,7 +28,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 	hashPassword, err := db.HashPassword(user.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	exist, err := db.ExistUsername(user.Username)
@@ -41,24 +41,10 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := db.AddAuthData(user.Username, hashPassword); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	var response = struct {
-		Result string `json:"result"`
-	}{
-		Result: "ok",
-	}
-	rvalue, err := json.Marshal(response)
-	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write(rvalue); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	writeJSON(w, map[string]string{"result": "ok"})
 }
 
 // Login godoc
@@ -74,65 +60,58 @@ func Register(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {string} string "Internal server error"
 // @Router /login [post]
 func Login(w http.ResponseWriter, r *http.Request) {
-	service.LogInfo("=== LOGIN START ===")
-	defer service.LogInfo("=== LOGIN END ===")
+	defer r.Body.Close()
 
 	user, err := service.ReadAuthRequest(r)
 	if err != nil {
-		service.LogError("ReadAuthRequest error: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	service.LogDebug("User data: %+v", user)
-
 	exist, err := db.CheckAuthData(user.Username, user.Password)
 	if err != nil {
-		service.LogError("CheckAuthData error: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	service.LogDebug("Auth check result: %v", exist)
-
 	if !exist {
-		service.LogDebug("User not authenticated")
 		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
-
 	ctx := r.Context()
-	service.LogDebug("Starting session")
 	session, err := cache.SessionManager.SessionStart(ctx, w, r)
 	if err != nil {
-		service.LogError("Session error: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	service.LogDebug("Session created: %s", session.SessionId)
-
 	if err := session.Set(ctx, "username", user.Username); err != nil {
-		service.LogError("Session set error: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	writeJSON(w, map[string]string{
+		"result": "ok",
+		"token":  session.SessionId,
+	})
+}
 
-	data := struct {
-		Result string `json:"result"`
-		Token  string `json:"token"`
-	}{
-		Result: "ok",
-		Token:  session.SessionId,
-	}
-	rvalue, err := json.Marshal(data)
+// Logout godoc
+// @Summary Logout
+// @Description Invalidates the user session
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} map[string]string "Logged out"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal server error"
+// @Router /logout [post]
+func Logout(w http.ResponseWriter, r *http.Request) {
+	session, err := cache.SessionManager.SessionGet(r.Context(), r)
 	if err != nil {
-		service.LogError("JSON marshal error: %v", err)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if err := cache.SessionManager.SessionDestroy(r.Context(), w, session.SessionId); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write(rvalue); err != nil {
-		service.LogError("Write error: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	service.LogInfo("Login successful")
+	writeJSON(w, map[string]string{"result": "ok"})
 }

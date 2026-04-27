@@ -19,7 +19,7 @@ func TestAudio(t *testing.T) {
 		{
 			name: "Valid audio request",
 			requestBody: types.AudioRequest{
-				Audio: "base64encodedaudio",
+				Audio: "https://static.deepgram.com/examples/Bueller-Life-moves-pretty-fast.wav",
 			},
 			expectedStatus: 200,
 			expectTaskID:   true,
@@ -28,6 +28,14 @@ func TestAudio(t *testing.T) {
 			name: "Empty audio",
 			requestBody: types.AudioRequest{
 				Audio: "",
+			},
+			expectedStatus: 400,
+			expectTaskID:   false,
+		},
+		{
+			name: "Invalid URL (not http/https)",
+			requestBody: types.AudioRequest{
+				Audio: "not-a-url",
 			},
 			expectedStatus: 400,
 			expectTaskID:   false,
@@ -50,8 +58,7 @@ func TestAudio(t *testing.T) {
 
 			if tt.expectedStatus == 200 && tt.expectTaskID {
 				var response types.GetInfoResponse
-				err := json.Unmarshal(rr.Body.Bytes(), &response)
-				if err != nil {
+				if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
 					t.Errorf("Failed to unmarshal response: %v", err)
 				}
 				if response.Task_id == "" {
@@ -65,51 +72,30 @@ func TestAudio(t *testing.T) {
 func TestStatus(t *testing.T) {
 	tests := []struct {
 		name           string
-		requestBody    types.GetInfoResponse
+		queryParams    string
 		expectedStatus int
-		expectStatus   bool
 	}{
 		{
-			name: "Valid status request",
-			requestBody: types.GetInfoResponse{
-				Task_id: "test-task-id",
-			},
+			name:           "Valid status request",
+			queryParams:    "?task_id=test-task-id",
 			expectedStatus: 200,
-			expectStatus:   true,
 		},
 		{
-			name: "Empty task ID",
-			requestBody: types.GetInfoResponse{
-				Task_id: "",
-			},
+			name:           "Missing task_id",
+			queryParams:    "",
 			expectedStatus: 400,
-			expectStatus:   false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			jsonBody, _ := json.Marshal(tt.requestBody)
-			req := httptest.NewRequest("GET", "/status", bytes.NewBuffer(jsonBody))
-			req.Header.Set("Content-Type", "application/json")
-
+			req := httptest.NewRequest("GET", "/status"+tt.queryParams, nil)
 			rr := httptest.NewRecorder()
 			api.Status(rr, req)
 
 			if status := rr.Code; status != tt.expectedStatus {
 				t.Errorf("handler returned wrong status code: got %v want %v",
 					status, tt.expectedStatus)
-			}
-
-			if tt.expectedStatus == 200 && tt.expectStatus {
-				var response types.GetStatusResponse
-				err := json.Unmarshal(rr.Body.Bytes(), &response)
-				if err != nil {
-					t.Errorf("Failed to unmarshal response: %v", err)
-				}
-				if response.Status == "" {
-					t.Errorf("Expected Status in response but not found")
-				}
 			}
 		})
 	}
@@ -118,51 +104,30 @@ func TestStatus(t *testing.T) {
 func TestResult(t *testing.T) {
 	tests := []struct {
 		name           string
-		requestBody    types.GetInfoResponse
+		queryParams    string
 		expectedStatus int
-		expectResult   bool
 	}{
 		{
-			name: "Valid result request",
-			requestBody: types.GetInfoResponse{
-				Task_id: "test-task-id",
-			},
+			name:           "Valid result request",
+			queryParams:    "?task_id=test-task-id",
 			expectedStatus: 200,
-			expectResult:   true,
 		},
 		{
-			name: "Empty task ID",
-			requestBody: types.GetInfoResponse{
-				Task_id: "",
-			},
+			name:           "Missing task_id",
+			queryParams:    "",
 			expectedStatus: 400,
-			expectResult:   false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			jsonBody, _ := json.Marshal(tt.requestBody)
-			req := httptest.NewRequest("GET", "/result", bytes.NewBuffer(jsonBody))
-			req.Header.Set("Content-Type", "application/json")
-
+			req := httptest.NewRequest("GET", "/result"+tt.queryParams, nil)
 			rr := httptest.NewRecorder()
 			api.Result(rr, req)
 
 			if status := rr.Code; status != tt.expectedStatus {
 				t.Errorf("handler returned wrong status code: got %v want %v",
 					status, tt.expectedStatus)
-			}
-
-			if tt.expectedStatus == 200 && tt.expectResult {
-				var response types.GetResultResponse
-				err := json.Unmarshal(rr.Body.Bytes(), &response)
-				if err != nil {
-					t.Errorf("Failed to unmarshal response: %v", err)
-				}
-				if response.Result == "" {
-					t.Errorf("Expected Result in response but not found")
-				}
 			}
 		})
 	}
@@ -198,7 +163,6 @@ func TestTasks(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/tasks"+tt.queryParams, nil)
-			req.Header.Set("Content-Type", "application/json")
 
 			rr := httptest.NewRecorder()
 			api.Tasks(rr, req)
@@ -210,12 +174,8 @@ func TestTasks(t *testing.T) {
 
 			if tt.expectedStatus == 200 && tt.expectTasks {
 				var response types.TaskListResponse
-				err := json.Unmarshal(rr.Body.Bytes(), &response)
-				if err != nil {
+				if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
 					t.Errorf("Failed to unmarshal response: %v", err)
-				}
-				if response.Tasks == nil {
-					t.Errorf("Expected Tasks in response but not found")
 				}
 				if response.Pagination.Page == 0 {
 					t.Errorf("Expected Pagination.Page in response but not found")

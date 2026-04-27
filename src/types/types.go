@@ -7,20 +7,13 @@ type AuthRequest struct {
 	Password string `json:"password"`
 }
 
-type Session interface {
-	GetSessionId() string
-	Get(key interface{}) (interface{}, error)
-	Delete(key interface{}) error
-	Set(key, value interface{}) error
-}
-
 type AudioRequest struct {
-	Audio string
+	Audio string `json:"audio"`
 }
 
 type AudioMessage struct {
-	Audio  string
-	TaskID string
+	Audio  string `json:"audio"`
+	TaskID string `json:"task_id"`
 }
 
 type QueueRabbitMQ struct {

@@ -7,16 +7,16 @@ import (
 
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := cache.SessionManager.SessionStart(r.Context(), w, r)
+		session, err := cache.SessionManager.SessionGet(r.Context(), r)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 		username, err := session.Get(r.Context(), "username")
 		if err != nil || username == "" {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		next.ServeHTTP(w, r.WithContext(r.Context()))
+		next.ServeHTTP(w, r)
 	})
 }

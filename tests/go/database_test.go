@@ -63,48 +63,36 @@ func TestGetTasksWithPagination(t *testing.T) {
 	}
 }
 
-func TestGetAllTasksWithPagination(t *testing.T) {
+func TestDeleteTask(t *testing.T) {
 	tests := []struct {
 		name      string
-		page      int
-		pageSize  int
+		taskID    string
+		username  string
 		expectErr bool
 	}{
 		{
-			name:      "Valid pagination",
-			page:      1,
-			pageSize:  10,
-			expectErr: false,
+			name:      "Non-existent task",
+			taskID:    "non-existent-id",
+			username:  "testuser",
+			expectErr: true,
 		},
 		{
-			name:      "Invalid page (zero)",
-			page:      0,
-			pageSize:  10,
-			expectErr: false,
-		},
-		{
-			name:      "Invalid page size (zero)",
-			page:      1,
-			pageSize:  0,
-			expectErr: false,
+			name:      "Empty task ID",
+			taskID:    "",
+			username:  "testuser",
+			expectErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tasks, total, err := db.GetAllTasksWithPagination(tt.page, tt.pageSize)
+			err := db.DeleteTask(tt.taskID, tt.username)
 
 			if tt.expectErr && err == nil {
 				t.Errorf("Expected error but got none")
 			}
 			if !tt.expectErr && err != nil {
 				t.Errorf("Unexpected error: %v", err)
-			}
-			if tasks == nil {
-				t.Errorf("Tasks should not be nil")
-			}
-			if total < 0 {
-				t.Errorf("Total should not be negative")
 			}
 		})
 	}

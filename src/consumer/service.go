@@ -2,157 +2,50 @@ package consumer
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	amqp "github.com/rabbitmq/amqp091-go"
-	"log"
 	"speechToText/src/config"
 	"speechToText/src/db"
+	"speechToText/src/service"
 	"speechToText/src/types"
+
+	"github.com/google/uuid"
+
+	listen "github.com/deepgram/deepgram-go-sdk/pkg/api/listen/v1/rest"
+	interfaces "github.com/deepgram/deepgram-go-sdk/pkg/client/interfaces"
+	client "github.com/deepgram/deepgram-go-sdk/pkg/client/listen"
 )
 
-func connectionAMQP(url string) *amqp.Connection {
-	connection, err := amqp.Dial(url)
-	if err != nil {
-		panic(err)
+func CreateTask(username string, request types.AudioRequest) (string, error) {
+	taskID := uuid.New().String()
+	if err := db.AddAudioTask(taskID, username, request.Audio); err != nil {
+		return "", err
 	}
-	return connection
+	if err := SendMessage(taskID, "queue", request.Audio, config.CurrentConfig.RabbitMQ.Url); err != nil {
+		return "", err
+	}
+	return taskID, nil
 }
 
-func declareQueue(RabbitMQUrl string, nameQueue string) (*types.QueueRabbitMQ, error) {
-	connection := connectionAMQP(RabbitMQUrl)
-	channel, err := connection.Channel()
-	if err != nil {
-		_ = connection.Close()
-		return nil, err
-	}
-	queue, err := channel.QueueDeclare(nameQueue, false, false, false, false, nil)
-	if err != nil {
-		_ = connection.Close()
-		return nil, err
-	}
-	return &types.QueueRabbitMQ{
-		Queue:      &queue,
-		Channel:    channel,
-		Connection: connection,
-	}, nil
-}
-
-func SendMessage(taskID string, nameQueue string, audioUrl string, RabbitMQUrl string) error {
-	queueSettings, err := declareQueue(RabbitMQUrl, nameQueue)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err := closeQueueRabbitMQ(queueSettings)
-		if err != nil {
-			fmt.Println(err)
-		}
-	}()
-	body := types.AudioMessage{
-		TaskID: taskID,
-		Audio:  audioUrl,
-	}
-	bodyJSON, err := json.Marshal(body)
-	if err != nil {
-		return err
-	}
-	err = queueSettings.Channel.Publish(
-		"",
-		queueSettings.Queue.Name,
-		false,
-		false,
-		amqp.Publishing{
-			ContentType: "application/json",
-			Body:        bodyJSON,
-		})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func ReceiveMessage(nameQueue string, ctx context.Context) error {
-	queueSettings, err := declareQueue(config.CurrentConfig.RabbitMQ.Url, nameQueue)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err := closeQueueRabbitMQ(queueSettings)
-		if err != nil {
-			fmt.Println(err)
-		}
-	}()
-	messages, err := queueSettings.Channel.ConsumeWithContext(
-		ctx,
-		nameQueue,
-		"",
-		false,
-		false,
-		true,
-		false,
-		nil,
-	)
-	if err != nil {
-		return err
+func ConvertToText(audioUrl string) (string, error) {
+	ctx := context.Background()
+	service.LogDebug("AUDIO URL: %s", audioUrl)
+	options := &interfaces.PreRecordedTranscriptionOptions{
+		Model:    "nova-2",
+		Language: "en",
 	}
 
-	go func() {
-		for {
-			select {
-			case message, ok := <-messages:
-				if !ok {
-					fmt.Println("Channel closed")
-					return
-				}
-				err := processingData(message)
-				if err != nil {
-					fmt.Println("error: ", err)
-					err = message.Nack(false, true)
-					if err != nil {
-						return
-					}
-				} else {
-					err := message.Ack(false)
-					if err != nil {
-						return
-					}
-				}
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
-	<-ctx.Done()
-	return nil
-}
+	c := client.NewREST(config.CurrentConfig.Deepgram.ApiKey, &interfaces.ClientOptions{})
+	dg := listen.New(c)
 
-func processingData(data amqp.Delivery) error {
-	var audio types.AudioMessage
-	err := json.Unmarshal(data.Body, &audio)
+	res, err := dg.FromURL(ctx, audioUrl, options)
 	if err != nil {
-		return err
+		service.LogError("FromURL failed. Err: %v", err)
+		return "", err
 	}
-	text, err := ConvertToText(audio.Audio)
-	if err != nil {
-		return err
-	}
-	if err = db.AddResultTask(audio.TaskID, text); err != nil {
-		return err
-	}
-	return nil
-}
 
-func closeQueueRabbitMQ(queue *types.QueueRabbitMQ) error {
-	if queue.Channel != nil {
-		err := queue.Channel.Close()
-		if err != nil {
-			return err
-		}
+	if len(res.Results.Channels) == 0 || len(res.Results.Channels[0].Alternatives) == 0 {
+		return "", fmt.Errorf("no transcription result returned by Deepgram")
 	}
-	if queue.Connection != nil {
-		return queue.Connection.Close()
-	}
-	return nil
+
+	return res.Results.Channels[0].Alternatives[0].Transcript, nil
 }

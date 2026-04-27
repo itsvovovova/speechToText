@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"speechToText/src/config"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -26,12 +27,16 @@ func InitDB() *sql.DB {
 		config.CurrentConfig.Database.Port,
 		config.CurrentConfig.Database.Name)
 
-	db, err := sql.Open("postgres", connURL)
+	conn, err := sql.Open("postgres", connURL)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := db.Ping(); err != nil {
-		_ = db.Close()
+	conn.SetMaxOpenConns(25)
+	conn.SetMaxIdleConns(5)
+	conn.SetConnMaxLifetime(5 * time.Minute)
+
+	if err := conn.Ping(); err != nil {
+		_ = conn.Close()
 		log.Fatal("Db connection error:", err)
 	}
 
@@ -41,9 +46,19 @@ func InitDB() *sql.DB {
 	if err != nil {
 		log.Fatal("Failed to create migration instance:", err)
 	}
+	defer func() {
+		srcErr, dbErr := m.Close()
+		if srcErr != nil {
+			log.Printf("migrate source close error: %v", srcErr)
+		}
+		if dbErr != nil {
+			log.Printf("migrate db close error: %v", dbErr)
+		}
+	}()
+
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		log.Fatal("Failed to apply migrations:", err)
 	}
 	log.Println("Database migrations completed successfully")
-	return db
+	return conn
 }

@@ -76,7 +76,7 @@ RABBITMQ_USER=GUEST
 RABBITMQ_PASSWORD=GUEST
 RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
 
-DEEPGRAM_API=0uhusec2a8c6e40c3f857621f010e1d6a
+DEEPGRAM_API=your_key_is_here
 ```
 4. **Run the service**:
 ```bash

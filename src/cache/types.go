@@ -8,6 +8,7 @@ import (
 type RedisSession struct {
 	SessionId string
 	Client    *redis.Client
+	TTL       time.Duration
 }
 
 type RedisSessionProvider struct {
