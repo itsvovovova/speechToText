@@ -11,12 +11,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func AddAuthData(username string, password string) error {
-	query := "INSERT INTO users (username, password) VALUES ($1, $2)"
-	if _, err := db.Exec(query, username, password); err != nil {
-		return err
-	}
-	return nil
+type Store struct {
+	db *sql.DB
+}
+
+func NewStore(db *sql.DB) *Store {
+	return &Store{db: db}
+}
+
+func (s *Store) AddAuthData(username string, password string) error {
+	_, err := s.db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", username, password)
+	return err
 }
 
 func HashPassword(password string) (string, error) {
@@ -24,39 +29,35 @@ func HashPassword(password string) (string, error) {
 	return string(bytes), err
 }
 
-func CheckAuthData(username string, password string) (bool, error) {
+func (s *Store) CheckAuthData(username string, password string) (bool, error) {
 	var hashedPassword string
-	err := db.QueryRow("SELECT password FROM users WHERE username = $1", username).Scan(&hashedPassword)
+	err := s.db.QueryRow("SELECT password FROM users WHERE username = $1", username).Scan(&hashedPassword)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return false, nil
 		}
 		return false, err
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
-	return err == nil, nil
+	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)) == nil, nil
 }
 
-func AddAudioTask(taskID string, username string, audio string) error {
-	query := "INSERT INTO tasks (username, task_id, audio, status) VALUES ($1, $2, $3, $4)"
-	if _, err := db.Exec(query, username, taskID, audio, "in progress"); err != nil {
-		return err
-	}
-	return nil
+func (s *Store) AddAudioTask(taskID string, username string, audio string) error {
+	_, err := s.db.Exec(
+		"INSERT INTO tasks (username, task_id, audio, status) VALUES ($1, $2, $3, $4)",
+		username, taskID, audio, "in progress",
+	)
+	return err
 }
 
-func GetStatusTask(taskID string) (string, error) {
+func (s *Store) GetStatusTask(taskID string) (string, error) {
 	var status string
-	err := db.QueryRow("SELECT status FROM tasks WHERE task_id = $1", taskID).Scan(&status)
-	if err != nil {
-		return "", err
-	}
-	return status, nil
+	err := s.db.QueryRow("SELECT status FROM tasks WHERE task_id = $1", taskID).Scan(&status)
+	return status, err
 }
 
-func GetResultTask(taskID string) (string, error) {
+func (s *Store) GetResultTask(taskID string) (string, error) {
 	var result sql.NullString
-	err := db.QueryRow("SELECT result FROM tasks WHERE task_id = $1", taskID).Scan(&result)
+	err := s.db.QueryRow("SELECT result FROM tasks WHERE task_id = $1", taskID).Scan(&result)
 	if err != nil {
 		return "", err
 	}
@@ -66,23 +67,21 @@ func GetResultTask(taskID string) (string, error) {
 	return "in progress", nil
 }
 
-func AddResultTask(taskID string, text string) error {
+func (s *Store) AddResultTask(taskID string, text string) error {
 	service.LogDebug("ADD RESULT TASK IS WORKING!")
 	service.LogDebug("TEXT: %s", text)
-	query := "UPDATE tasks SET result = $2, status = 'completed' WHERE task_id = $1"
-	_, err := db.Exec(query, taskID, text)
+	_, err := s.db.Exec("UPDATE tasks SET result = $2, status = 'completed' WHERE task_id = $1", taskID, text)
 	return err
 }
 
-func UpdateTaskFailed(taskID string) error {
-	_, err := db.Exec("UPDATE tasks SET status = 'failed' WHERE task_id = $1", taskID)
+func (s *Store) UpdateTaskFailed(taskID string) error {
+	_, err := s.db.Exec("UPDATE tasks SET status = 'failed' WHERE task_id = $1", taskID)
 	return err
 }
 
-func ExistUsername(username string) (bool, error) {
+func (s *Store) ExistUsername(username string) (bool, error) {
 	var exists bool
-	query := "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)"
-	err := db.QueryRow(query, username).Scan(&exists)
+	err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)", username).Scan(&exists)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return false, nil
@@ -92,19 +91,17 @@ func ExistUsername(username string) (bool, error) {
 	return exists, nil
 }
 
-func ExistTask(taskID string, username string) (bool, error) {
+func (s *Store) ExistTask(taskID string, username string) (bool, error) {
 	var exists bool
-	query := "SELECT EXISTS(SELECT 1 FROM tasks WHERE task_id = $1 AND username = $2)"
-	err := db.QueryRow(query, taskID, username).Scan(&exists)
-	if err != nil {
-		return false, err
-	}
-	return exists, nil
+	err := s.db.QueryRow(
+		"SELECT EXISTS(SELECT 1 FROM tasks WHERE task_id = $1 AND username = $2)",
+		taskID, username,
+	).Scan(&exists)
+	return exists, err
 }
 
-func DeleteTask(taskID string, username string) error {
-	query := "DELETE FROM tasks WHERE task_id = $1 AND username = $2"
-	result, err := db.Exec(query, taskID, username)
+func (s *Store) DeleteTask(taskID string, username string) error {
+	result, err := s.db.Exec("DELETE FROM tasks WHERE task_id = $1 AND username = $2", taskID, username)
 	if err != nil {
 		return err
 	}
@@ -118,22 +115,22 @@ func DeleteTask(taskID string, username string) error {
 	return nil
 }
 
-func GetTasksWithPagination(username string, page, pageSize int) ([]types.TaskInfo, int64, error) {
+func (s *Store) GetTasksWithPagination(username string, page, pageSize int) ([]types.TaskInfo, int64, error) {
 	offset := (page - 1) * pageSize
 
 	var total int64
-	if err := db.QueryRow("SELECT COUNT(*) FROM tasks WHERE username = $1", username).Scan(&total); err != nil {
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM tasks WHERE username = $1", username).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
-	query := `
+	rows, err := s.db.Query(`
 		SELECT task_id, username, status, created_at
 		FROM tasks
 		WHERE username = $1
 		ORDER BY created_at DESC
-		LIMIT $2 OFFSET $3
-	`
-	rows, err := db.Query(query, username, pageSize, offset)
+		LIMIT $2 OFFSET $3`,
+		username, pageSize, offset,
+	)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -149,8 +146,5 @@ func GetTasksWithPagination(username string, page, pageSize int) ([]types.TaskIn
 		task.Created = createdAt.Format(time.RFC3339)
 		tasks = append(tasks, task)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, 0, err
-	}
-	return tasks, total, nil
+	return tasks, total, rows.Err()
 }

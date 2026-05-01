@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http/httptest"
-	"speechToText/src/api"
 	"speechToText/src/types"
 	"testing"
 )
@@ -15,57 +14,50 @@ func TestRegister(t *testing.T) {
 		requestBody    types.AuthRequest
 		expectedStatus int
 		expectedResult string
+		needsDB        bool
 	}{
 		{
-			name: "Valid registration",
-			requestBody: types.AuthRequest{
-				Username: "testuser",
-				Password: "testpass",
-			},
+			name:           "Valid registration",
+			requestBody:    types.AuthRequest{Username: "testuser", Password: "testpass1"},
 			expectedStatus: 200,
 			expectedResult: "ok",
+			needsDB:        true,
 		},
 		{
-			name: "Empty username",
-			requestBody: types.AuthRequest{
-				Username: "",
-				Password: "testpass",
-			},
+			name:           "Empty username",
+			requestBody:    types.AuthRequest{Username: "", Password: "testpass"},
 			expectedStatus: 400,
 		},
 		{
-			name: "Empty password",
-			requestBody: types.AuthRequest{
-				Username: "testuser",
-				Password: "",
-			},
+			name:           "Empty password",
+			requestBody:    types.AuthRequest{Username: "testuser", Password: ""},
 			expectedStatus: 400,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.needsDB && testStore == nil {
+				t.Skip("DB not available")
+			}
 			jsonBody, _ := json.Marshal(tt.requestBody)
 			req := httptest.NewRequest("POST", "/register", bytes.NewBuffer(jsonBody))
 			req.Header.Set("Content-Type", "application/json")
 
 			rr := httptest.NewRecorder()
-			api.Register(rr, req)
+			testHandlers.Register(rr, req)
 
 			if status := rr.Code; status != tt.expectedStatus {
-				t.Errorf("handler returned wrong status code: got %v want %v",
-					status, tt.expectedStatus)
+				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.expectedStatus)
 			}
 
 			if tt.expectedStatus == 200 {
 				var response map[string]string
-				err := json.Unmarshal(rr.Body.Bytes(), &response)
-				if err != nil {
+				if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
 					t.Errorf("Failed to unmarshal response: %v", err)
 				}
 				if response["result"] != tt.expectedResult {
-					t.Errorf("handler returned wrong result: got %v want %v",
-						response["result"], tt.expectedResult)
+					t.Errorf("handler returned wrong result: got %v want %v", response["result"], tt.expectedResult)
 				}
 			}
 		})
@@ -78,54 +70,47 @@ func TestLogin(t *testing.T) {
 		requestBody    types.AuthRequest
 		expectedStatus int
 		expectToken    bool
+		needsDB        bool
 	}{
 		{
-			name: "Valid login",
-			requestBody: types.AuthRequest{
-				Username: "testuser",
-				Password: "testpass",
-			},
+			name:           "Valid login",
+			requestBody:    types.AuthRequest{Username: "testuser", Password: "testpass1"},
 			expectedStatus: 200,
 			expectToken:    true,
+			needsDB:        true,
 		},
 		{
-			name: "Invalid credentials",
-			requestBody: types.AuthRequest{
-				Username: "wronguser",
-				Password: "wrongpass",
-			},
+			name:           "Invalid credentials",
+			requestBody:    types.AuthRequest{Username: "wronguser", Password: "wrongpass1"},
 			expectedStatus: 401,
-			expectToken:    false,
+			needsDB:        true,
 		},
 		{
-			name: "Empty username",
-			requestBody: types.AuthRequest{
-				Username: "",
-				Password: "testpass",
-			},
+			name:           "Empty username",
+			requestBody:    types.AuthRequest{Username: "", Password: "testpass"},
 			expectedStatus: 400,
-			expectToken:    false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.needsDB && testStore == nil {
+				t.Skip("DB not available")
+			}
 			jsonBody, _ := json.Marshal(tt.requestBody)
 			req := httptest.NewRequest("POST", "/login", bytes.NewBuffer(jsonBody))
 			req.Header.Set("Content-Type", "application/json")
 
 			rr := httptest.NewRecorder()
-			api.Login(rr, req)
+			testHandlers.Login(rr, req)
 
 			if status := rr.Code; status != tt.expectedStatus {
-				t.Errorf("handler returned wrong status code: got %v want %v",
-					status, tt.expectedStatus)
+				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.expectedStatus)
 			}
 
 			if tt.expectedStatus == 200 && tt.expectToken {
 				var response map[string]string
-				err := json.Unmarshal(rr.Body.Bytes(), &response)
-				if err != nil {
+				if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
 					t.Errorf("Failed to unmarshal response: %v", err)
 				}
 				if _, exists := response["token"]; !exists {

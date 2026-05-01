@@ -30,6 +30,10 @@ func NewRedisSessionProvider(address string) RedisSessionProvider {
 	}
 }
 
+func (p *RedisSessionProvider) Close() error {
+	return p.Client.Close()
+}
+
 func (sessionProvider *RedisSessionProvider) SessionRead(sessionID string, ctx context.Context, ttl time.Duration) (*RedisSession, error) {
 	exists, err := sessionProvider.Client.Exists(ctx, sessionID).Result()
 	if err != nil {

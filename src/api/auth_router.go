@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/http"
-	"speechToText/src/cache"
 	"speechToText/src/db"
 	"speechToText/src/service"
 )
@@ -18,7 +17,7 @@ import (
 // @Failure 400 {string} string "Validation error"
 // @Failure 500 {string} string "Internal server error"
 // @Router /register [post]
-func Register(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	user, err := service.ReadAuthRequest(r)
@@ -31,7 +30,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	exist, err := db.ExistUsername(user.Username)
+	exist, err := h.store.ExistUsername(user.Username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -40,7 +39,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Username already taken", http.StatusBadRequest)
 		return
 	}
-	if err := db.AddAuthData(user.Username, hashPassword); err != nil {
+	if err := h.store.AddAuthData(user.Username, hashPassword); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -59,7 +58,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {string} string "Invalid credentials"
 // @Failure 500 {string} string "Internal server error"
 // @Router /login [post]
-func Login(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	user, err := service.ReadAuthRequest(r)
@@ -67,7 +66,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	exist, err := db.CheckAuthData(user.Username, user.Password)
+	exist, err := h.store.CheckAuthData(user.Username, user.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -77,7 +76,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	session, err := cache.SessionManager.SessionStart(ctx, w, r)
+	session, err := h.session.SessionStart(ctx, w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -103,13 +102,13 @@ func Login(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {string} string "Unauthorized"
 // @Failure 500 {string} string "Internal server error"
 // @Router /logout [post]
-func Logout(w http.ResponseWriter, r *http.Request) {
-	session, err := cache.SessionManager.SessionGet(r.Context(), r)
+func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
+	session, err := h.session.SessionGet(r.Context(), r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	if err := cache.SessionManager.SessionDestroy(r.Context(), w, session.SessionId); err != nil {
+	if err := h.session.SessionDestroy(r.Context(), w, session.SessionId); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

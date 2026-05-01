@@ -14,73 +14,93 @@ import (
 	"speechToText/src/types"
 )
 
-var (
-	producerConn *amqp.Connection
-	producerCh   *amqp.Channel
-	producerMu   sync.Mutex
-)
+// Producer manages a lazily-initialised RabbitMQ producer connection.
+type Producer struct {
+	url  string
+	mu   sync.Mutex
+	conn *amqp.Connection
+	ch   *amqp.Channel
+}
 
-func getOrCreateProducerChannel(url string) (*amqp.Channel, error) {
-	producerMu.Lock()
-	defer producerMu.Unlock()
+func NewProducer(url string) *Producer {
+	return &Producer{url: url}
+}
 
-	if producerConn == nil || producerConn.IsClosed() {
-		conn, err := amqp.Dial(url)
+func (p *Producer) channel() (*amqp.Channel, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.conn == nil || p.conn.IsClosed() {
+		conn, err := amqp.Dial(p.url)
 		if err != nil {
 			return nil, err
 		}
-		producerConn = conn
-		producerCh = nil
+		p.conn = conn
+		p.ch = nil
 	}
 
-	if producerCh == nil {
-		ch, err := producerConn.Channel()
+	if p.ch == nil {
+		ch, err := p.conn.Channel()
 		if err != nil {
 			return nil, err
 		}
-		producerCh = ch
+		p.ch = ch
 	}
 
-	return producerCh, nil
+	return p.ch, nil
 }
 
-func resetProducerChannel() {
-	producerMu.Lock()
-	defer producerMu.Unlock()
-	producerCh = nil
+func (p *Producer) resetChannel() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.ch = nil
 }
 
-func SendMessage(taskID string, nameQueue string, audioUrl string, rabbitMQUrl string) error {
-	ch, err := getOrCreateProducerChannel(rabbitMQUrl)
+func (p *Producer) Send(taskID string, queueName string, audioUrl string) error {
+	ch, err := p.channel()
 	if err != nil {
 		return err
 	}
 
-	if _, err = ch.QueueDeclare(nameQueue, false, false, false, false, nil); err != nil {
-		resetProducerChannel()
+	if _, err = ch.QueueDeclare(queueName, false, false, false, false, nil); err != nil {
+		p.resetChannel()
 		return err
 	}
 
-	body := types.AudioMessage{
-		TaskID: taskID,
-		Audio:  audioUrl,
-	}
-	bodyJSON, err := json.Marshal(body)
+	body, err := json.Marshal(types.AudioMessage{TaskID: taskID, Audio: audioUrl})
 	if err != nil {
 		return err
 	}
 
-	err = ch.Publish("", nameQueue, false, false, amqp.Publishing{
+	err = ch.Publish("", queueName, false, false, amqp.Publishing{
 		ContentType: "application/json",
-		Body:        bodyJSON,
+		Body:        body,
 	})
 	if err != nil {
-		resetProducerChannel()
+		p.resetChannel()
 	}
 	return err
 }
 
-func ReceiveMessage(nameQueue string, ctx context.Context) error {
+func (p *Producer) Close() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.conn != nil && !p.conn.IsClosed() {
+		return p.conn.Close()
+	}
+	return nil
+}
+
+// Consumer processes messages from a RabbitMQ queue.
+type Consumer struct {
+	store *db.Store
+}
+
+func NewConsumer(store *db.Store) *Consumer {
+	return &Consumer{store: store}
+}
+
+func (c *Consumer) Receive(queueName string, ctx context.Context) error {
 	connection, err := amqp.Dial(config.CurrentConfig.RabbitMQ.Url)
 	if err != nil {
 		return err
@@ -93,21 +113,12 @@ func ReceiveMessage(nameQueue string, ctx context.Context) error {
 	}
 	defer channel.Close()
 
-	queue, err := channel.QueueDeclare(nameQueue, false, false, false, false, nil)
+	queue, err := channel.QueueDeclare(queueName, false, false, false, false, nil)
 	if err != nil {
 		return err
 	}
 
-	messages, err := channel.ConsumeWithContext(
-		ctx,
-		queue.Name,
-		"",
-		false,
-		false,
-		true,
-		false,
-		nil,
-	)
+	messages, err := channel.ConsumeWithContext(ctx, queue.Name, "", false, false, true, false, nil)
 	if err != nil {
 		return err
 	}
@@ -115,18 +126,18 @@ func ReceiveMessage(nameQueue string, ctx context.Context) error {
 	go func() {
 		for {
 			select {
-			case message, ok := <-messages:
+			case msg, ok := <-messages:
 				if !ok {
 					fmt.Println("Channel closed")
 					return
 				}
-				if err := processingData(message); err != nil {
+				if err := c.processMessage(msg); err != nil {
 					fmt.Println("error:", err)
-					if err := message.Nack(false, true); err != nil {
+					if err := msg.Nack(false, true); err != nil {
 						return
 					}
 				} else {
-					if err := message.Ack(false); err != nil {
+					if err := msg.Ack(false); err != nil {
 						return
 					}
 				}
@@ -141,18 +152,18 @@ func ReceiveMessage(nameQueue string, ctx context.Context) error {
 	return nil
 }
 
-func processingData(data amqp.Delivery) error {
+func (c *Consumer) processMessage(data amqp.Delivery) error {
 	var audio types.AudioMessage
 	if err := json.Unmarshal(data.Body, &audio); err != nil {
 		return err
 	}
 	text, err := ConvertToText(audio.Audio)
 	if err != nil {
-		_ = db.UpdateTaskFailed(audio.TaskID)
+		_ = c.store.UpdateTaskFailed(audio.TaskID)
 		return err
 	}
-	if err := db.AddResultTask(audio.TaskID, text); err != nil {
-		_ = db.UpdateTaskFailed(audio.TaskID)
+	if err := c.store.AddResultTask(audio.TaskID, text); err != nil {
+		_ = c.store.UpdateTaskFailed(audio.TaskID)
 		return err
 	}
 	return nil

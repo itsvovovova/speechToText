@@ -18,6 +18,17 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// Handlers holds all service dependencies for HTTP handlers.
+type Handlers struct {
+	store    *db.Store
+	session  *cache.RedisSessionManager
+	producer *consumer.Producer
+}
+
+func NewHandlers(store *db.Store, session *cache.RedisSessionManager, producer *consumer.Producer) *Handlers {
+	return &Handlers{store: store, session: session, producer: producer}
+}
+
 func validateAudioURL(audioURL string) error {
 	if audioURL == "" {
 		return fmt.Errorf("audio URL is required")
@@ -54,10 +65,10 @@ func writeJSON(w http.ResponseWriter, v any) {
 // @Failure 401 {string} string "Unauthorized"
 // @Failure 500 {string} string "Internal server error"
 // @Router /audio [post]
-func Audio(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) Audio(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	session, err := cache.SessionManager.SessionGet(r.Context(), r)
+	session, err := h.session.SessionGet(r.Context(), r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -81,7 +92,7 @@ func Audio(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	taskID, err := consumer.CreateTask(username, request)
+	taskID, err := consumer.CreateTask(h.store, h.producer, username, request)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -103,8 +114,8 @@ func Audio(w http.ResponseWriter, r *http.Request) {
 // @Failure 403 {string} string "Forbidden"
 // @Failure 500 {string} string "Internal server error"
 // @Router /status [get]
-func Status(w http.ResponseWriter, r *http.Request) {
-	session, err := cache.SessionManager.SessionGet(r.Context(), r)
+func (h *Handlers) Status(w http.ResponseWriter, r *http.Request) {
+	session, err := h.session.SessionGet(r.Context(), r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -119,7 +130,7 @@ func Status(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "task_id is required", http.StatusBadRequest)
 		return
 	}
-	exist, err := db.ExistTask(taskID, username)
+	exist, err := h.store.ExistTask(taskID, username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -128,7 +139,7 @@ func Status(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
-	status, err := db.GetStatusTask(taskID)
+	status, err := h.store.GetStatusTask(taskID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, "task not found", http.StatusNotFound)
@@ -154,8 +165,8 @@ func Status(w http.ResponseWriter, r *http.Request) {
 // @Failure 403 {string} string "Forbidden"
 // @Failure 500 {string} string "Internal server error"
 // @Router /result [get]
-func Result(w http.ResponseWriter, r *http.Request) {
-	session, err := cache.SessionManager.SessionGet(r.Context(), r)
+func (h *Handlers) Result(w http.ResponseWriter, r *http.Request) {
+	session, err := h.session.SessionGet(r.Context(), r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -170,7 +181,7 @@ func Result(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "task_id is required", http.StatusBadRequest)
 		return
 	}
-	exist, err := db.ExistTask(taskID, username)
+	exist, err := h.store.ExistTask(taskID, username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -179,7 +190,7 @@ func Result(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
-	result, err := db.GetResultTask(taskID)
+	result, err := h.store.GetResultTask(taskID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, "task not found", http.StatusNotFound)
@@ -204,8 +215,8 @@ func Result(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {string} string "Unauthorized"
 // @Failure 500 {string} string "Internal server error"
 // @Router /tasks [get]
-func Tasks(w http.ResponseWriter, r *http.Request) {
-	session, err := cache.SessionManager.SessionGet(r.Context(), r)
+func (h *Handlers) Tasks(w http.ResponseWriter, r *http.Request) {
+	session, err := h.session.SessionGet(r.Context(), r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -230,7 +241,7 @@ func Tasks(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tasks, total, err := db.GetTasksWithPagination(username, page, pageSize)
+	tasks, total, err := h.store.GetTasksWithPagination(username, page, pageSize)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -261,8 +272,8 @@ func Tasks(w http.ResponseWriter, r *http.Request) {
 // @Failure 403 {string} string "Forbidden"
 // @Failure 500 {string} string "Internal server error"
 // @Router /tasks/{id} [delete]
-func DeleteTask(w http.ResponseWriter, r *http.Request) {
-	session, err := cache.SessionManager.SessionGet(r.Context(), r)
+func (h *Handlers) DeleteTask(w http.ResponseWriter, r *http.Request) {
+	session, err := h.session.SessionGet(r.Context(), r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -277,7 +288,7 @@ func DeleteTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "task id is required", http.StatusBadRequest)
 		return
 	}
-	exist, err := db.ExistTask(taskID, username)
+	exist, err := h.store.ExistTask(taskID, username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -286,7 +297,7 @@ func DeleteTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
-	if err := db.DeleteTask(taskID, username); err != nil {
+	if err := h.store.DeleteTask(taskID, username); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

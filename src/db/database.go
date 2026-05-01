@@ -13,23 +13,13 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var db *sql.DB
-
-func init() {
-	db = InitDB()
-}
-
-func InitDB() *sql.DB {
+func NewDB(cfg *config.DatabaseConfig) (*sql.DB, error) {
 	connURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		config.CurrentConfig.Database.Username,
-		config.CurrentConfig.Database.Password,
-		config.CurrentConfig.Database.Host,
-		config.CurrentConfig.Database.Port,
-		config.CurrentConfig.Database.Name)
+		cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Name)
 
 	conn, err := sql.Open("postgres", connURL)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	conn.SetMaxOpenConns(25)
 	conn.SetMaxIdleConns(5)
@@ -37,28 +27,28 @@ func InitDB() *sql.DB {
 
 	if err := conn.Ping(); err != nil {
 		_ = conn.Close()
-		log.Fatal("Db connection error:", err)
+		return nil, fmt.Errorf("db ping: %w", err)
 	}
 
-	m, err := migrate.New(
-		config.CurrentConfig.Database.MigrationPath,
-		connURL)
+	m, err := migrate.New(cfg.MigrationPath, connURL)
 	if err != nil {
-		log.Fatal("Failed to create migration instance:", err)
+		_ = conn.Close()
+		return nil, fmt.Errorf("migrate init: %w", err)
 	}
 	defer func() {
 		srcErr, dbErr := m.Close()
 		if srcErr != nil {
-			log.Printf("migrate source close error: %v", srcErr)
+			log.Printf("migrate source close: %v", srcErr)
 		}
 		if dbErr != nil {
-			log.Printf("migrate db close error: %v", dbErr)
+			log.Printf("migrate db close: %v", dbErr)
 		}
 	}()
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Fatal("Failed to apply migrations:", err)
+		_ = conn.Close()
+		return nil, fmt.Errorf("migrate up: %w", err)
 	}
 	log.Println("Database migrations completed successfully")
-	return conn
+	return conn, nil
 }

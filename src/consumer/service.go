@@ -15,12 +15,12 @@ import (
 	client "github.com/deepgram/deepgram-go-sdk/pkg/client/listen"
 )
 
-func CreateTask(username string, request types.AudioRequest) (string, error) {
+func CreateTask(store *db.Store, producer *Producer, username string, request types.AudioRequest) (string, error) {
 	taskID := uuid.New().String()
-	if err := db.AddAudioTask(taskID, username, request.Audio); err != nil {
+	if err := store.AddAudioTask(taskID, username, request.Audio); err != nil {
 		return "", err
 	}
-	if err := SendMessage(taskID, "queue", request.Audio, config.CurrentConfig.RabbitMQ.Url); err != nil {
+	if err := producer.Send(taskID, "queue", request.Audio); err != nil {
 		return "", err
 	}
 	return taskID, nil
